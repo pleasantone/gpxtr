@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gpxtr_pleasantone"
+version = "0.0.1"
+authors = [
+  { name="Paul Traina", email="pleasantone@users.noreply.github.com" },
+]
+description = "A small example package"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "gpxpy",
+    "astral",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pleasantone/gpxtr"
+"Bug Tracker" = "https://github.com/pleasantone/gpxtr/issues"
+
+[project.scripts]
+gpxtr = "gpxtr:main"
