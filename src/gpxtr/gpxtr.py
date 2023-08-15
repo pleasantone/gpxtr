@@ -1,3 +1,4 @@
+# pylint: disable=missing-function-docstring,line-too-long
 """
 create a markdown template from a Garmin GPX file for route information
 """
@@ -5,7 +6,7 @@ create a markdown template from a Garmin GPX file for route information
 import argparse
 import math
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 import astral
 import astral.sun
@@ -19,14 +20,11 @@ from haversine import haversine, Unit
 from scipy.spatial import cKDTree
 from shapely.geometry import Point
 
-# pylint: disable=missing-function-docstring
-
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
 NAMESPACE = {
     'trp': 'http://www.garmin.com/xmlschemas/TripExtensions/v1'
 }
-
 
 def format_time(time_s: float, seconds: bool) -> str:
     if not time_s:
@@ -92,7 +90,7 @@ def sun_rise_set(route) -> str:
     return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
             f'Sunset: {sun["sunset"].astimezone():%H:%M}')
 
-def geodata_tracks(tracks):
+def geodata_tracks(tracks: list[gpxpy.gpx.GPXTrack]) -> gpd.GeoDataFrame:
     track_points = []
     track_totals = 0.0
     for track in tracks:
@@ -112,7 +110,7 @@ def geodata_tracks(tracks):
                             columns=['geometry', 'segment_distance', 'total_distance'],
                             crs="EPSG:4326") # type: ignore
 
-def geodata_points(points):
+def geodata_points(points: Union[list[gpxpy.gpx.GPXWaypoint], list[gpxpy.gpx.GPXRoutePoint]]) -> gpd.GeoDataFrame:
     waypoints = []
     for point in points:
         waypoints.append([Point(point.latitude, point.longitude),
@@ -123,7 +121,7 @@ def geodata_points(points):
                             columns=['geometry', 'name', 'symbol', 'departure', 'layover'],
                             crs="EPSG:4326") # type: ignore
 
-def geodata_merge_points(points, tracks):
+def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame) -> pd.DataFrame:
     np_points = np.array(list(points.geometry.apply(lambda x: (x.x, x.y))))
     np_tracks = np.array(list(tracks.geometry.apply(lambda x: (x.x, x.y))))
     btree = cKDTree(np_tracks)
@@ -133,38 +131,34 @@ def geodata_merge_points(points, tracks):
         [
             points.reset_index(drop=True),
             tracks_nearest,
-            pd.Series(dist, name='dist')
+            pd.Series(dist, name='nearest')
         ],
         axis=1)
     return dataframe.sort_values(by=['total_distance', 'name'])
 
 def gas_reset(point) -> str:
-    return 'G' if point.symbol and 'Gas Station' in point.symbol or point.Index == 0 else ''
+    return 'G' if (point.symbol and
+                   'Gas Station' in point.symbol or
+                   point.segment_distance == 0) else ''
 
-# pylint: disable=line-too-long
-OUT_HDR = '|      Lat,Lon       | Description                    |   Dist. | G |  Time | Notes'
+OUT_HDR = '|      Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
 OUT_SEP = '| :----------------: | :----------------------------- | ------: | - | ----: | :----'
 OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
 
 def print_point(point, last_gas) -> None:
     departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
+    if last_gas > point.segment_distance:   # assume we have filled up between segments
+        last_gas = 0.0
     print(OUT_FMT.format(
         point.geometry.x, point.geometry.y,
         (point.name or '').replace('\n', ' '),
-        f'{point.segment_distance - last_gas:.0f}/{point.segment_distance:.0f}' if point.segment_distance and gas_reset(point) else f'{point.segment_distance:.0f}',
+        f'{round(point.segment_distance - last_gas):.0f}/{round(point.segment_distance):.0f}' if point.segment_distance and gas_reset(point) else f'{round(point.segment_distance):.0f}',
         gas_reset(point) or ' ',
         departure.strftime('%H:%M') if departure else '',
         point.symbol or '',
         f' ({point.layover})' if point.layover else ''))
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="input filename")
-    args = parser.parse_args()
-
-    with open(args.input, 'r', encoding='UTF-8') as file:
-        gpx = gpxpy.parse(file)
-
+def print_table(gpx) -> None:
     if gpx.name:
         print(f'# {gpx.name}')
     if gpx.creator:
@@ -172,8 +166,7 @@ def main() -> int:
 
     gd_tracks = geodata_tracks(gpx.tracks)
     gd_waypoints = geodata_points(gpx.waypoints)
-    gd_merged = geodata_merge_points(gd_waypoints, gd_tracks)
-
+    gd_merged = geodata_nearest(gd_waypoints, gd_tracks)
 
     print('\n## Waypoints')
     print(f'\n{OUT_HDR}\n{OUT_SEP}')
@@ -191,7 +184,7 @@ def main() -> int:
             print(f'### {route.description}')
         print(f'\n{OUT_HDR}\n{OUT_SEP}')
         gd_route_points = geodata_points([point for point in route.points if not shaping_point(point)])
-        gd_merged = geodata_merge_points(gd_route_points, gd_tracks)
+        gd_merged = geodata_nearest(gd_route_points, gd_tracks)
         last_gas = 0.0
         for point in gd_merged.itertuples():
             print_point(point, last_gas)
@@ -204,8 +197,12 @@ def main() -> int:
     if move_data and move_data.moving_time:
         print(f'- Total moving time: {format_time(move_data.moving_time, False)}')
     print(f'- Total distance: {format_long_length(gpx.length_2d(), True)}')
-    return 0
 
 if __name__ == '__main__':
-    import sys
-    sys.exit(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", nargs="+", help="input file(s)", type=argparse.FileType('r'))
+    args = parser.parse_args()
+
+    for handle in args.input:
+        with handle as stream:
+            print_table(gpxpy.parse(stream))
