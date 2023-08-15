@@ -16,22 +16,19 @@ Use:
    "python" or "python3" -- I'll assume python3/pip3
 2. There is a python library installation program, pip3 (or pip) that we use for
    installing the dependencies for this program.
-3. `pip3 install gpxpy`
-4. `pip3 install astral`
-5. running `python3 gpxtr.py` -- should give you the output:
+3. `pip3 install https://github.com/pleasantone/gpxtr`
+5. `gpxtr` -- should give you the output:
 
     ```bash
-    $ python3 ./gpxtr.py
-    usage: gpxtr.py [-h] input
-    gpxtr.py: error: the following arguments are required: input
+    $ gpxtr
+    usage: gpxtr [-h] input [input ...]
+    gpxtr: error: the following arguments are required: input
     ```
-
-    If not, one of the dependencies is missing.
 
 6. Test it against sample input file, should generate the following output...
 
     ```text
-    $ python3 ./gpxtr.py fort-ross.gpx
+    $ gpxtr fort-ross.gpx
     | Stop |      Lat,Lon       | Description                    | Miles | Gas  | Time  | Layover | Notes
     | ---: | :----------------: | :----------------------------- | ----: | :--: | ----: | ------: | :----
     |   01 |  38.0045,-122.5447 | Peet's Coffee Northgate Mall   |       |    G | 09:15 |         | Restaurant

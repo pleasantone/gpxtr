@@ -198,7 +198,7 @@ def print_table(gpx) -> None:
         print(f'- Total moving time: {format_time(move_data.moving_time, False)}')
     print(f'- Total distance: {format_long_length(gpx.length_2d(), True)}')
 
-if __name__ == '__main__':
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs="+", help="input file(s)", type=argparse.FileType('r'))
     args = parser.parse_args()
@@ -206,3 +206,6 @@ if __name__ == '__main__':
     for handle in args.input:
         with handle as stream:
             print_table(gpxpy.parse(stream))
+
+if __name__ == '__main__':
+    main()
