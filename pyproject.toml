@@ -18,8 +18,13 @@ classifiers = [
 ]
 dependencies = [
     "astral",
+    "geopandas",
     "gpxpy",
     "haversine",
+    "numpy",
+    "pandas",
+    "scipy",
+    "shapely"
 ]
 
 [project.urls]
