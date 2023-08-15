@@ -21,6 +21,7 @@ dependencies = [
     "geopandas",
     "gpxpy",
     "haversine",
+    "markdown2",
     "numpy",
     "pandas",
     "scipy",

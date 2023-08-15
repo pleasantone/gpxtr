@@ -4,6 +4,7 @@ create a markdown template from a Garmin GPX file for route information
 """
 
 import argparse
+import io
 import math
 from datetime import datetime
 from typing import Optional, Union
@@ -13,6 +14,7 @@ import astral.sun
 import geopandas as gpd
 import gpxpy
 import gpxpy.gpx
+import markdown2
 import numpy as np
 import pandas as pd
 
@@ -145,67 +147,81 @@ OUT_HDR = '|      Lat,Lon       | Name                           |   Dist. | G |
 OUT_SEP = '| :----------------: | :----------------------------- | ------: | - | ----: | :----'
 OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
 
-def print_point(point, last_gas) -> None:
+def format_point(point, last_gas) -> str:
     departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
     if last_gas > point.segment_distance:   # assume we have filled up between segments
         last_gas = 0.0
-    print(OUT_FMT.format(
+    return OUT_FMT.format(
         point.geometry.x, point.geometry.y,
         (point.name or '').replace('\n', ' '),
         f'{round(point.segment_distance - last_gas):.0f}/{round(point.segment_distance):.0f}' if point.segment_distance and gas_reset(point) else f'{round(point.segment_distance):.0f}',
         gas_reset(point) or ' ',
         departure.strftime('%H:%M') if departure else '',
         point.symbol or '',
-        f' ({point.layover})' if point.layover else ''))
+        f' ({point.layover})' if point.layover else '')
 
-def print_table(gpx) -> None:
+def print_table(gpx, out=None) -> None:
     if gpx.name:
-        print(f'# {gpx.name}')
+        print(f'# {gpx.name}', file=out)
     if gpx.creator:
-        print(f'## {gpx.creator}')
+        print(f'## {gpx.creator}', file=out)
 
     gd_tracks = geodata_tracks(gpx.tracks)
     gd_waypoints = geodata_points(gpx.waypoints)
     gd_merged = geodata_nearest(gd_waypoints, gd_tracks)
 
-    print('\n## Waypoints')
-    print(f'\n{OUT_HDR}\n{OUT_SEP}')
+    print('## Waypoints', file=out)
+    print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
     last_gas = 0.0
     for point in gd_merged.itertuples():
-        print_point(point, last_gas)
+        print(format_point(point, last_gas), file=out)
         if gas_reset(point):
             last_gas = point.segment_distance
 
-    print()
+    print(file=out)
     for route in gpx.routes:
         if route.name:
-            print(f'## {route.name}')
+            print(f'## {route.name}', file=out)
         if route.description:
-            print(f'### {route.description}')
-        print(f'\n{OUT_HDR}\n{OUT_SEP}')
+            print(f'### {route.description}', file=put)
+        print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
         gd_route_points = geodata_points([point for point in route.points if not shaping_point(point)])
         gd_merged = geodata_nearest(gd_route_points, gd_tracks)
         last_gas = 0.0
         for point in gd_merged.itertuples():
-            print_point(point, last_gas)
+            print(format_point(point, last_gas), file=out)
             if gas_reset(point):
                 last_gas = point.segment_distance
 
-        print(f'\n- {sun_rise_set(route)}')
+        print(f'\n- {sun_rise_set(route)}', file=out)
 
     move_data = gpx.get_moving_data()
     if move_data and move_data.moving_time:
-        print(f'- Total moving time: {format_time(move_data.moving_time, False)}')
-    print(f'- Total distance: {format_long_length(gpx.length_2d(), True)}')
+        print(f'- Total moving time: {format_time(move_data.moving_time, False)}', file=out)
+    print(f'- Total distance: {format_long_length(gpx.length_2d(), True)}', file=out)
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs="+", help="input file(s)", type=argparse.FileType('r'))
+    parser.add_argument("--html", action='store_true', help="output in HTML, not markdown")
+    parser.add_argument("-o", "--output", help="output file", type=argparse.FileType('w'), default=None)
     args = parser.parse_args()
+
+    out = args.output
+    if args.html:
+        final_out = out
+        out = io.StringIO()
 
     for handle in args.input:
         with handle as stream:
-            print_table(gpxpy.parse(stream))
+            print_table(gpxpy.parse(stream), out=out)
+
+    if args.html:
+        print(markdown2.markdown(out.getvalue(), extras=["tables"]), file=final_out)
+        if final_out:
+            final_out.close()
+    if out:
+        out.close()
 
 if __name__ == '__main__':
     main()
