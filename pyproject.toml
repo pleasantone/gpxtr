@@ -17,8 +17,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "gpxpy",
     "astral",
+    "gpxpy",
+    "haversine",
 ]
 
 [project.urls]

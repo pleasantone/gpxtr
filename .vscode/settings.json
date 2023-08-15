@@ -1,10 +1,17 @@
 {
     "cSpell.words": [
+        "argmin",
+        "dataframe",
+        "geopandas",
         "gpxpy",
         "gpxtr",
         "Guerneville",
+        "iloc",
+        "itertuples",
         "Nicasio",
         "Northgate",
-        "Peet's"
+        "Peet's",
+        "pydatetime",
+        "scipy"
     ]
 }

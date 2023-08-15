@@ -9,21 +9,23 @@ from typing import Optional
 
 import astral
 import astral.sun
+import geopandas as gpd
 import gpxpy
 import gpxpy.gpx
+import numpy as np
+import pandas as pd
 
+from haversine import haversine, Unit
+from scipy.spatial import cKDTree
+from shapely.geometry import Point
 
-NAMESPACE = {
-    'trp': 'http://www.garmin.com/xmlschemas/TripExtensions/v1'
-}
-
-# pylint: disable=line-too-long
-OUT_HDR = '| Stop |      Lat,Lon       | Description                    | Miles | Gas  | Time  | Layover | Notes'
-OUT_SEP = '| ---: | :----------------: | :----------------------------- | ----: | :--: | ----: | ------: | :----'
-OUT_FMT = '|   {:02d} | {:-8.4f},{:8.4f} | {:30.30} |       | {:>4} | {:>5} | {:>7} | {}'
+# pylint: disable=missing-function-docstring
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
+NAMESPACE = {
+    'trp': 'http://www.garmin.com/xmlschemas/TripExtensions/v1'
+}
 
 
 def format_time(time_s: float, seconds: bool) -> str:
@@ -67,14 +69,14 @@ def layover(point) -> str:
     """ layover time at a given RoutePoint (Basecamp extension) """
     for extension in point.extensions:
         for duration in extension.findall('trp:StopDuration', NAMESPACE):
-            return(duration.text.replace('PT', '+').lower())
+            return duration.text.replace('PT', '+').lower()
     return ''
 
 def departure_time(point) -> Optional[datetime]:
     """ returns datetime object for route point with departure times or None """
     for extension in point.extensions:
         for departure in extension.findall('trp:DepartureTime', NAMESPACE):
-            return(datetime.fromisoformat(departure.text.replace('Z', '+00:00')))
+            return datetime.fromisoformat(departure.text.replace('Z', '+00:00'))
 
 def start_point(route) -> tuple[float, float, Optional[datetime]]:
     """ what is the start location of the route, and what's the departure time? """
@@ -90,9 +92,73 @@ def sun_rise_set(route) -> str:
     return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
             f'Sunset: {sun["sunset"].astimezone():%H:%M}')
 
+def geodata_tracks(tracks):
+    track_points = []
+    track_totals = 0.0
+    for track in tracks:
+        segment_totals = 0.0
+        last = track.segments[0].points[0]
+        for segment in track.segments:
+            for point in segment.points:
+                delta = haversine(
+                    (last.latitude, last.longitude), (point.latitude, point.longitude),
+                    Unit.MILES)
+                segment_totals += delta
+                track_totals += delta
+                last = point
+                track_points.append([Point(point.latitude, point.longitude),
+                                    segment_totals, track_totals])
+    return gpd.GeoDataFrame(track_points,
+                            columns=['geometry', 'segment_distance', 'total_distance'],
+                            crs="EPSG:4326") # type: ignore
+
+def geodata_points(points):
+    waypoints = []
+    for point in points:
+        waypoints.append([Point(point.latitude, point.longitude),
+                         point.name, point.symbol,
+                         departure_time(point) or pd.NaT,
+                         layover(point)])
+    return gpd.GeoDataFrame(waypoints,
+                            columns=['geometry', 'name', 'symbol', 'departure', 'layover'],
+                            crs="EPSG:4326") # type: ignore
+
+def geodata_merge_points(points, tracks):
+    np_points = np.array(list(points.geometry.apply(lambda x: (x.x, x.y))))
+    np_tracks = np.array(list(tracks.geometry.apply(lambda x: (x.x, x.y))))
+    btree = cKDTree(np_tracks)
+    dist, idx = btree.query(np_points, k=1)
+    tracks_nearest = tracks.iloc[idx].drop(columns="geometry").reset_index(drop=True)
+    dataframe = pd.concat(
+        [
+            points.reset_index(drop=True),
+            tracks_nearest,
+            pd.Series(dist, name='dist')
+        ],
+        axis=1)
+    return dataframe.sort_values(by=['total_distance', 'name'])
+
+def gas_reset(point) -> str:
+    return 'G' if point.symbol and 'Gas Station' in point.symbol or point.Index == 0 else ''
+
+# pylint: disable=line-too-long
+OUT_HDR = '|      Lat,Lon       | Description                    |   Dist. | G |  Time | Notes'
+OUT_SEP = '| :----------------: | :----------------------------- | ------: | - | ----: | :----'
+OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
+
+def print_point(point, last_gas) -> None:
+    departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
+    print(OUT_FMT.format(
+        point.geometry.x, point.geometry.y,
+        (point.name or '').replace('\n', ' '),
+        f'{point.segment_distance - last_gas:.0f}/{point.segment_distance:.0f}' if point.segment_distance and gas_reset(point) else f'{point.segment_distance:.0f}',
+        gas_reset(point) or ' ',
+        departure.strftime('%H:%M') if departure else '',
+        point.symbol or '',
+        f' ({point.layover})' if point.layover else ''))
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--waypoints", help="create waypoint table as well", action='store_true')
     parser.add_argument("input", help="input filename")
     args = parser.parse_args()
 
@@ -104,39 +170,34 @@ def main() -> int:
     if gpx.creator:
         print(f'## {gpx.creator}')
 
-    if args.waypoints:
-        stop = 0
-        print(f'\n{OUT_HDR}\n{OUT_SEP}')
-        for point in gpx.waypoints:
-            stop += 1
-            print(OUT_FMT.format(
-                stop,
-                point.latitude, point.longitude,
-                (point.name or '').replace('\n', ' '),
-                'G' if point.symbol and 'Gas Station' in point.symbol or stop == 1 else '',
-                '',
-                '',
-                point.symbol or ''))
+    gd_tracks = geodata_tracks(gpx.tracks)
+    gd_waypoints = geodata_points(gpx.waypoints)
+    gd_merged = geodata_merge_points(gd_waypoints, gd_tracks)
 
+
+    print('\n## Waypoints')
+    print(f'\n{OUT_HDR}\n{OUT_SEP}')
+    last_gas = 0.0
+    for point in gd_merged.itertuples():
+        print_point(point, last_gas)
+        if gas_reset(point):
+            last_gas = point.segment_distance
+
+    print()
     for route in gpx.routes:
         if route.name:
             print(f'## {route.name}')
         if route.description:
             print(f'### {route.description}')
         print(f'\n{OUT_HDR}\n{OUT_SEP}')
-        stop = 0
-        for point in route.points:
-            if not shaping_point(point):
-                stop += 1
-                departure = departure_time(point)
-                print(OUT_FMT.format(
-                    stop,
-                    point.latitude, point.longitude,
-                    (point.name or '').replace('\n', ' '),
-                    'G' if point.symbol and 'Gas Station' in point.symbol or stop == 1 else '',
-                    departure.astimezone().strftime('%H:%M') if departure else '',
-                    layover(point) or '',
-                    point.symbol or ''))
+        gd_route_points = geodata_points([point for point in route.points if not shaping_point(point)])
+        gd_merged = geodata_merge_points(gd_route_points, gd_tracks)
+        last_gas = 0.0
+        for point in gd_merged.itertuples():
+            print_point(point, last_gas)
+            if gas_reset(point):
+                last_gas = point.segment_distance
+
         print(f'\n- {sun_rise_set(route)}')
 
     move_data = gpx.get_moving_data()
