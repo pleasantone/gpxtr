@@ -9,18 +9,24 @@ from typing import Optional
 
 import astral
 import astral.sun
+import geopandas as gpd
 import gpxpy
 import gpxpy.gpx
+import numpy as np
+import pandas as pd
 
+from haversine import haversine, Unit
+from scipy.spatial import cKDTree, distance
+from shapely.geometry import Point
 
 NAMESPACE = {
     'trp': 'http://www.garmin.com/xmlschemas/TripExtensions/v1'
 }
 
 # pylint: disable=line-too-long
-OUT_HDR = '| Stop |      Lat,Lon       | Description                    | Miles | Gas  | Time  | Layover | Notes'
-OUT_SEP = '| ---: | :----------------: | :----------------------------- | ----: | :--: | ----: | ------: | :----'
-OUT_FMT = '|   {:02d} | {:-8.4f},{:8.4f} | {:30.30} |       | {:>4} | {:>5} | {:>7} | {}'
+OUT_HDR = '|      Lat,Lon       | Description                    |  Miles | Gas  | Time  | Layover | Notes'
+OUT_SEP = '| :----------------: | :----------------------------- | -----: | :--: | ----: | ------: | :----'
+OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:6.2f} | {:>4} | {:>5} | {:>7} | {}'
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
@@ -90,9 +96,49 @@ def sun_rise_set(route) -> str:
     return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
             f'Sunset: {sun["sunset"].astimezone():%H:%M}')
 
+def closest_node(node, nodes):
+    closest_index = distance.cdist([node], nodes).argmin()
+    return nodes[closest_index]
+
+def geodata_tracks(tracks):
+    track_points = []
+    track_totals = 0.0
+    for track in tracks:
+        print(f'## Track {track.name})')
+        segment_totals = 0.0
+        last = track.segments[0].points[0]
+        for segment in track.segments:
+            for point in segment.points:
+                delta = haversine((last.latitude, last.longitude), (point.latitude, point.longitude), Unit.MILES)
+                segment_totals += delta
+                track_totals += delta
+                last = point
+                track_points.append([Point(point.latitude, point.longitude), segment_totals, track_totals])
+    return gpd.GeoDataFrame(track_points, columns=['geometry', 'segment_distance', 'total_distance'], crs="EPSG:4326")
+
+def geodata_waypoints(points):
+    waypoints = []
+    for point in points:
+        waypoints.append([Point(point.latitude, point.longitude), point.name, point.symbol])
+    return gpd.GeoDataFrame(waypoints, columns=['geometry', 'name', 'symbol'], crs="EPSG:4326")
+
+def geodata_merge_points(points, tracks):
+    np_points = np.array(list(points.geometry.apply(lambda x: (x.x, x.y))))
+    np_tracks = np.array(list(tracks.geometry.apply(lambda x: (x.x, x.y))))
+    btree = cKDTree(np_tracks)
+    dist, idx = btree.query(np_points, k=1)
+    tracks_nearest = tracks.iloc[idx].drop(columns="geometry").reset_index(drop=True)
+    return pd.concat(
+        [
+            points.reset_index(drop=True),
+            tracks_nearest,
+            pd.Series(dist, name='dist')
+        ],
+        axis=1)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--waypoints", help="create waypoint table as well", action='store_true')
     parser.add_argument("input", help="input filename")
     args = parser.parse_args()
 
@@ -104,19 +150,22 @@ def main() -> int:
     if gpx.creator:
         print(f'## {gpx.creator}')
 
-    if args.waypoints:
-        stop = 0
-        print(f'\n{OUT_HDR}\n{OUT_SEP}')
-        for point in gpx.waypoints:
-            stop += 1
-            print(OUT_FMT.format(
-                stop,
-                point.latitude, point.longitude,
-                (point.name or '').replace('\n', ' '),
-                'G' if point.symbol and 'Gas Station' in point.symbol or stop == 1 else '',
-                '',
-                '',
-                point.symbol or ''))
+    gd_tracks = geodata_tracks(gpx.tracks)
+    gd_waypoints = geodata_waypoints(gpx.waypoints)
+    gd_merged = geodata_merge_points(gd_waypoints, gd_tracks)
+    print(gd_merged)
+
+    print('\n## Waypoints')
+    print(f'\n{OUT_HDR}\n{OUT_SEP}')
+    for point in gd_merged.itertuples():
+        print(OUT_FMT.format(
+            point.geometry.x, point.geometry.y,
+            (point.name or '').replace('\n', ' '),
+            point.segment_distance,
+            'G' if point.symbol and 'Gas Station' in point.symbol or point.Index == 0 else '',
+            '',
+            '',
+            point.symbol or ''))
 
     for route in gpx.routes:
         if route.name:
@@ -130,9 +179,9 @@ def main() -> int:
                 stop += 1
                 departure = departure_time(point)
                 print(OUT_FMT.format(
-                    stop,
                     point.latitude, point.longitude,
                     (point.name or '').replace('\n', ' '),
+                    0.0,
                     'G' if point.symbol and 'Gas Station' in point.symbol or stop == 1 else '',
                     departure.astimezone().strftime('%H:%M') if departure else '',
                     layover(point) or '',
