@@ -4,7 +4,7 @@
     <link href="http://www.garmin.com">
       <text>Garmin International</text>
     </link>
-    <time>2023-07-29T00:55:16Z</time>
+    <time>2023-08-10T21:57:06Z</time>
     <bounds maxlat="38.59572172164917" maxlon="-122.5130295753479" minlat="37.892811298370361" minlon="-123.345801830291748"/>
   </metadata>
   <wpt lat="38.329195976257324" lon="-123.04363489151001">
@@ -269,7 +269,7 @@ Cazadero, California, 95421, United States
     </extensions>
   </wpt>
   <rte>
-    <name>Fort Ross Run Jul 2023</name>
+    <name>Fort Ross Run</name>
     <extensions>
       <gpxx:RouteExtension>
         <gpxx:IsAutoNamed>false</gpxx:IsAutoNamed>
@@ -2120,46 +2120,9 @@ Monte Rio, CA, 95462, USA</desc>
           </gpxx:rpt>
           <gpxx:rpt lat="38.501973152160645" lon="-123.000569343566895"/>
           <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703">
-            <gpxx:Subclass>05007101D501CAAC08001F002400EB550A00</gpxx:Subclass>
+            <gpxx:Subclass>05007101D501CAAC08001F002400EB554300</gpxx:Subclass>
           </gpxx:rpt>
           <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703"/>
-          <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703"/>
-          <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703"/>
-          <gpxx:rpt lat="38.501973152160645" lon="-123.000075900927186">
-            <gpxx:Subclass>05007101D501CAAC0800211700000A000A00</gpxx:Subclass>
-          </gpxx:rpt>
-        </gpxx:RoutePointExtension>
-      </extensions>
-    </rtept>
-    <rtept lat="38.501780033111572" lon="-123.000075817108154">
-      <time>2023-07-27T19:49:28Z</time>
-      <name>76 Gurneville</name>
-      <cmt>76
-16383 Main St
-Guerneville, California, 95446, United States
-707-869-2051</cmt>
-      <desc>76
-16383 Main St
-Guerneville, California, 95446, United States
-707-869-2051</desc>
-      <sym>Gas Station</sym>
-      <extensions>
-        <trp:ViaPoint>
-          <trp:StopDuration>PT15M</trp:StopDuration>
-          <trp:CalculationMode>FasterTime</trp:CalculationMode>
-          <trp:ElevationMode>Standard</trp:ElevationMode>
-        </trp:ViaPoint>
-        <gpxx:RoutePointExtension>
-          <gpxx:Subclass>1009802F5910A480BC031200000000000000</gpxx:Subclass>
-          <gpxx:rpt lat="38.501973152160645" lon="-123.000075900927186">
-            <gpxx:Subclass>05007101D501CAAC0800211600000A000700</gpxx:Subclass>
-          </gpxx:rpt>
-          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
-          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
-          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
-          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082">
-            <gpxx:Subclass>05007101D501CAAC08001F0024002D563200</gpxx:Subclass>
-          </gpxx:rpt>
           <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
           <gpxx:rpt lat="38.501973152160645" lon="-122.99968957901001"/>
           <gpxx:rpt lat="38.501973152160645" lon="-122.999496459960938"/>
@@ -2212,14 +2175,51 @@ Guerneville, California, 95446, United States
           </gpxx:rpt>
           <gpxx:rpt lat="38.501994609832764" lon="-122.998251914978027"/>
           <gpxx:rpt lat="38.501994609832764" lon="-122.998509407043457">
-            <gpxx:Subclass>05007101D501CAAC88001F00240071564300</gpxx:Subclass>
+            <gpxx:Subclass>05007101D501CAAC88001F00240071563200</gpxx:Subclass>
           </gpxx:rpt>
           <gpxx:rpt lat="38.501994609832764" lon="-122.998509407043457"/>
           <gpxx:rpt lat="38.501973152160645" lon="-122.998766899108887"/>
           <gpxx:rpt lat="38.501973152160645" lon="-122.999260425567627"/>
           <gpxx:rpt lat="38.501973152160645" lon="-122.999496459960938"/>
           <gpxx:rpt lat="38.501973152160645" lon="-122.99968957901001"/>
+          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082">
+            <gpxx:Subclass>05007101D501CAAC88001F0024002D560700</gpxx:Subclass>
+          </gpxx:rpt>
           <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
+          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
+          <gpxx:rpt lat="38.501973152160645" lon="-122.999882698059082"/>
+          <gpxx:rpt lat="38.501973152160645" lon="-123.000075900927186">
+            <gpxx:Subclass>05007101D501CAAC0800211700000A000700</gpxx:Subclass>
+          </gpxx:rpt>
+        </gpxx:RoutePointExtension>
+      </extensions>
+    </rtept>
+    <rtept lat="38.501780033111572" lon="-123.000075817108154">
+      <time>2023-07-27T19:49:28Z</time>
+      <name>76 Gurneville</name>
+      <cmt>76
+16383 Main St
+Guerneville, California, 95446, United States
+707-869-2051</cmt>
+      <desc>76
+16383 Main St
+Guerneville, California, 95446, United States
+707-869-2051</desc>
+      <sym>Gas Station</sym>
+      <extensions>
+        <trp:ViaPoint>
+          <trp:StopDuration>PT15M</trp:StopDuration>
+          <trp:CalculationMode>FasterTime</trp:CalculationMode>
+          <trp:ElevationMode>Standard</trp:ElevationMode>
+        </trp:ViaPoint>
+        <gpxx:RoutePointExtension>
+          <gpxx:Subclass>1009802F5910A480BC031200000000000000</gpxx:Subclass>
+          <gpxx:rpt lat="38.501973152160645" lon="-123.000075900927186">
+            <gpxx:Subclass>05007101D501CAAC0800211600000A000A00</gpxx:Subclass>
+          </gpxx:rpt>
+          <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703"/>
+          <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703"/>
+          <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703"/>
           <gpxx:rpt lat="38.501973152160645" lon="-123.000354766845703">
             <gpxx:Subclass>05007101D50185AD88001F002400EB550800</gpxx:Subclass>
           </gpxx:rpt>
@@ -4540,6 +4540,7 @@ Bodega Bay, California, 94923, United States
       <sym>Gas Station</sym>
       <extensions>
         <trp:ViaPoint>
+          <trp:StopDuration>PT15M</trp:StopDuration>
           <trp:CalculationMode>FasterTime</trp:CalculationMode>
           <trp:ElevationMode>Standard</trp:ElevationMode>
         </trp:ViaPoint>
@@ -5514,6 +5515,7 @@ Marshall, CA, 94940, USA</desc>
       <sym>Restroom</sym>
       <extensions>
         <trp:ViaPoint>
+          <trp:StopDuration>PT5M</trp:StopDuration>
           <trp:CalculationMode>FasterTime</trp:CalculationMode>
           <trp:ElevationMode>Standard</trp:ElevationMode>
         </trp:ViaPoint>
@@ -6912,7 +6914,7 @@ Bolinas, CA, 94924, USA</desc>
     </rtept>
   </rte>
   <trk>
-    <name>Fort Ross Run Jul 2023 tk</name>
+    <name>Fort Ross Run tk</name>
     <extensions>
       <gpxx:TrackExtension>
         <gpxx:DisplayColor>DarkGray</gpxx:DisplayColor>
@@ -6920,7 +6922,7 @@ Bolinas, CA, 94924, USA</desc>
     </extensions>
     <trkseg>
       <trkpt lat="38.004519939422607" lon="-122.544722557067871">
-        <time>2023-07-29T00:53:56Z</time>
+        <time>2023-08-10T21:54:24Z</time>
       </trkpt>
       <trkpt lat="38.004571655765176" lon="-122.544995974749327"/>
       <trkpt lat="38.005185127258301" lon="-122.544808387756348"/>
@@ -8092,9 +8094,6 @@ Bolinas, CA, 94924, USA</desc>
       <trkpt lat="38.501973152160645" lon="-123.000698089599609"/>
       <trkpt lat="38.501973152160645" lon="-123.000569343566895"/>
       <trkpt lat="38.501973152160645" lon="-123.000354766845703"/>
-      <trkpt lat="38.501973152160645" lon="-123.000075900927186"/>
-      <trkpt lat="38.501780033111572" lon="-123.000075817108154"/>
-      <trkpt lat="38.501973152160645" lon="-123.000075900927186"/>
       <trkpt lat="38.501973152160645" lon="-122.999882698059082"/>
       <trkpt lat="38.501973152160645" lon="-122.99968957901001"/>
       <trkpt lat="38.501973152160645" lon="-122.999496459960938"/>
@@ -8110,6 +8109,9 @@ Bolinas, CA, 94924, USA</desc>
       <trkpt lat="38.501973152160645" lon="-122.999496459960938"/>
       <trkpt lat="38.501973152160645" lon="-122.99968957901001"/>
       <trkpt lat="38.501973152160645" lon="-122.999882698059082"/>
+      <trkpt lat="38.501973152160645" lon="-123.000075900927186"/>
+      <trkpt lat="38.501780033111572" lon="-123.000075817108154"/>
+      <trkpt lat="38.501973152160645" lon="-123.000075900927186"/>
       <trkpt lat="38.501973152160645" lon="-123.000354766845703"/>
       <trkpt lat="38.501973152160645" lon="-123.000569343566895"/>
       <trkpt lat="38.501973152160645" lon="-123.000698089599609"/>
