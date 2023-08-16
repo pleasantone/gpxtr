@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/src/gpxtr/gpxtr.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["testdata/ich-north-fixed.gpx"]
+            "args": ["--sort", "name", "testdata/ich-north-4-fixed.gpx"]
         }
     ]
 }

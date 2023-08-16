@@ -13,12 +13,12 @@ import astral
 import astral.sun
 import geopandas as gpd
 import gpxpy
-import gpxpy.gpx
 import markdown2
 import numpy as np
 import pandas as pd
 
-from haversine import haversine, Unit
+from gpxpy.gpx import GPXTrack, GPXWaypoint, GPXRoutePoint
+from gpxpy.geo import distance
 from scipy.spatial import cKDTree
 from shapely.geometry import Point
 
@@ -92,27 +92,25 @@ def sun_rise_set(route) -> str:
     return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
             f'Sunset: {sun["sunset"].astimezone():%H:%M}')
 
-def geodata_tracks(tracks: list[gpxpy.gpx.GPXTrack]) -> gpd.GeoDataFrame:
-    track_points = []
-    track_totals = 0.0
+def geodata_tracks(tracks: list[GPXTrack]) -> gpd.GeoDataFrame:
+    tracks_points = []
+    total_distance = 0.0
     for track in tracks:
-        segment_totals = 0.0
+        track_distance = 0.0
         last = track.segments[0].points[0]
         for segment in track.segments:
             for point in segment.points:
-                delta = haversine(
-                    (last.latitude, last.longitude), (point.latitude, point.longitude),
-                    Unit.MILES)
-                segment_totals += delta
-                track_totals += delta
+                delta = distance(last.latitude, last.longitude, None, point.latitude, point.longitude, None) / 1000 * KM_TO_MILES
+                track_distance += delta
+                total_distance += delta
                 last = point
-                track_points.append([Point(point.latitude, point.longitude),
-                                    segment_totals, track_totals])
-    return gpd.GeoDataFrame(track_points,
-                            columns=['geometry', 'segment_distance', 'total_distance'],
+                tracks_points.append([Point(point.latitude, point.longitude),
+                                    track_distance, total_distance])
+    return gpd.GeoDataFrame(tracks_points,
+                            columns=['geometry', 'track_distance', 'total_distance'],
                             crs="EPSG:4326") # type: ignore
 
-def geodata_points(points: Union[list[gpxpy.gpx.GPXWaypoint], list[gpxpy.gpx.GPXRoutePoint]]) -> gpd.GeoDataFrame:
+def geodata_points(points: Union[list[GPXWaypoint], list[GPXRoutePoint]]) -> gpd.GeoDataFrame:
     waypoints = []
     for point in points:
         waypoints.append([Point(point.latitude, point.longitude),
@@ -123,7 +121,7 @@ def geodata_points(points: Union[list[gpxpy.gpx.GPXWaypoint], list[gpxpy.gpx.GPX
                             columns=['geometry', 'name', 'symbol', 'departure', 'layover'],
                             crs="EPSG:4326") # type: ignore
 
-def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame) -> pd.DataFrame:
+def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=None) -> pd.DataFrame:
     np_points = np.array(list(points.geometry.apply(lambda x: (x.x, x.y))))
     np_tracks = np.array(list(tracks.geometry.apply(lambda x: (x.x, x.y))))
     btree = cKDTree(np_tracks)
@@ -136,12 +134,12 @@ def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame) -> pd.Da
             pd.Series(dist, name='nearest')
         ],
         axis=1)
-    return dataframe.sort_values(by=['total_distance', 'name'])
+    return dataframe.sort_values(by=(sort or ['total_distance', 'name']))
 
 def gas_reset(point) -> str:
     return 'G' if (point.symbol and
                    'Gas Station' in point.symbol or
-                   point.segment_distance == 0) else ''
+                   point.track_distance == 0) else ''
 
 OUT_HDR = '|      Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
 OUT_SEP = '| :----------------: | :----------------------------- | ------: | - | ----: | :----'
@@ -149,18 +147,18 @@ OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
 
 def format_point(point, last_gas) -> str:
     departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
-    if last_gas > point.segment_distance:   # assume we have filled up between segments
+    if last_gas > point.track_distance:   # assume we have filled up between segments
         last_gas = 0.0
     return OUT_FMT.format(
         point.geometry.x, point.geometry.y,
         (point.name or '').replace('\n', ' '),
-        f'{round(point.segment_distance - last_gas):.0f}/{round(point.segment_distance):.0f}' if point.segment_distance and gas_reset(point) else f'{round(point.segment_distance):.0f}',
+        f'{round(point.track_distance - last_gas):.0f}/{round(point.track_distance):.0f}' if point.track_distance and gas_reset(point) else f'{round(point.track_distance):.0f}',
         gas_reset(point) or ' ',
         departure.strftime('%H:%M') if departure else '',
         point.symbol or '',
         f' ({point.layover})' if point.layover else '')
 
-def print_table(gpx, out=None) -> None:
+def print_table(gpx, sort=None, out=None) -> None:
     if gpx.name:
         print(f'# {gpx.name}', file=out)
     if gpx.creator:
@@ -168,7 +166,7 @@ def print_table(gpx, out=None) -> None:
 
     gd_tracks = geodata_tracks(gpx.tracks)
     gd_waypoints = geodata_points(gpx.waypoints)
-    gd_merged = geodata_nearest(gd_waypoints, gd_tracks)
+    gd_merged = geodata_nearest(gd_waypoints, gd_tracks, sort=sort)
 
     print('## Waypoints', file=out)
     print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
@@ -176,14 +174,14 @@ def print_table(gpx, out=None) -> None:
     for point in gd_merged.itertuples():
         print(format_point(point, last_gas), file=out)
         if gas_reset(point):
-            last_gas = point.segment_distance
+            last_gas = point.track_distance
 
     print(file=out)
     for route in gpx.routes:
         if route.name:
             print(f'## {route.name}', file=out)
         if route.description:
-            print(f'### {route.description}', file=put)
+            print(f'### {route.description}', file=out)
         print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
         gd_route_points = geodata_points([point for point in route.points if not shaping_point(point)])
         gd_merged = geodata_nearest(gd_route_points, gd_tracks)
@@ -191,7 +189,7 @@ def print_table(gpx, out=None) -> None:
         for point in gd_merged.itertuples():
             print(format_point(point, last_gas), file=out)
             if gas_reset(point):
-                last_gas = point.segment_distance
+                last_gas = point.track_distance
 
         print(f'\n- {sun_rise_set(route)}', file=out)
 
@@ -202,19 +200,21 @@ def print_table(gpx, out=None) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", nargs="+", help="input file(s)", type=argparse.FileType('r'))
+    parser.add_argument("input", nargs="+", type=argparse.FileType('r'), help="input file(s)")
     parser.add_argument("--html", action='store_true', help="output in HTML, not markdown")
-    parser.add_argument("-o", "--output", help="output file", type=argparse.FileType('w'), default=None)
+    parser.add_argument("--output", type=argparse.FileType('w'), default=None, help="output file")
+    parser.add_argument("--sort", default='', help="sort algorithm for waypoints")
     args = parser.parse_args()
 
     out = args.output
+    final_out = None
     if args.html:
         final_out = out
         out = io.StringIO()
 
     for handle in args.input:
         with handle as stream:
-            print_table(gpxpy.parse(stream), out=out)
+            print_table(gpxpy.parse(stream), sort=args.sort.split(','), out=out)
 
     if args.html:
         print(markdown2.markdown(out.getvalue(), extras=["tables"]), file=final_out)
