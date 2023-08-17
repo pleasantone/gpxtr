@@ -136,27 +136,39 @@ def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=Non
         axis=1)
     return dataframe.sort_values(by=(sort or ['total_distance', 'name']))
 
-def gas_reset(point) -> str:
+def gas_reset(point, track_distance) -> str:
     return 'G' if (point.symbol and
                    'Gas Station' in point.symbol or
-                   point.track_distance == 0) else ''
+                   track_distance == 0) else ''
+
+def distance_in_track(gpx, nearest):
+    dist = 0.0
+    for index, segment in enumerate(gpx.tracks[nearest.track_no].segments):
+        if index < nearest.segment_no:
+            dist += segment.length_2d()
+        elif index == nearest.segment_no:
+            for previous, point in zip(segment.points[0:nearest.point_no], segment.points[1:nearest.point_no]):
+                dist += point.distance_2d(previous)
+    return dist
+
 
 OUT_HDR = '|      Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
 OUT_SEP = '| :----------------: | :----------------------------- | ------: | - | ----: | :----'
 OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
 
-def format_point(point, last_gas) -> str:
+def format_point(point, track_distance, last_gas) -> str:
     departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
-    if last_gas > point.track_distance:   # assume we have filled up between segments
+    if last_gas > track_distance:   # assume we have filled up between segments
         last_gas = 0.0
+    delay = layover(point)
     return OUT_FMT.format(
-        point.geometry.x, point.geometry.y,
+        point.latitude, point.longitude,
         (point.name or '').replace('\n', ' '),
-        f'{round(point.track_distance - last_gas):.0f}/{round(point.track_distance):.0f}' if point.track_distance and gas_reset(point) else f'{round(point.track_distance):.0f}',
-        gas_reset(point) or ' ',
+        f'{math.ceil(track_distance - last_gas):.0f}/{math.ceil(track_distance):.0f}' if track_distance and gas_reset(point, track_distance) else f'{math.ceil(track_distance):.0f}',
+        gas_reset(point, track_distance) or ' ',
         departure.strftime('%H:%M') if departure else '',
         point.symbol or '',
-        f' ({point.layover})' if point.layover else '')
+        f' ({delay})' if delay else '')
 
 def print_table(gpx, sort=None, out=None) -> None:
     if gpx.name:
@@ -164,17 +176,28 @@ def print_table(gpx, sort=None, out=None) -> None:
     if gpx.creator:
         print(f'## {gpx.creator}', file=out)
 
-    gd_tracks = geodata_tracks(gpx.tracks)
-    gd_waypoints = geodata_points(gpx.waypoints)
-    gd_merged = geodata_nearest(gd_waypoints, gd_tracks, sort=sort)
+    track_waypoints = [ [] for i in range(len(gpx.tracks))]
+    for waypoint in gpx.waypoints:
+        nearest = gpx.get_nearest_locations(waypoint, 0.01)
+        print(waypoint, nearest)
+        for location in nearest:
+            dist = distance_in_track(gpx, location) / 1000.0 * KM_TO_MILES
+            waypoint.departure = None
+            track_waypoints[location.track_no].append((waypoint, dist))
 
-    print('## Waypoints', file=out)
-    print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
-    last_gas = 0.0
-    for point in gd_merged.itertuples():
-        print(format_point(point, last_gas), file=out)
-        if gas_reset(point):
-            last_gas = point.track_distance
+
+
+    for index, track in enumerate(gpx.tracks):
+        print(f'\n## {track.name} -- {math.ceil(track.length_2d() / 1000 * KM_TO_MILES):.0f}mi', file=out)
+        print(f'{OUT_HDR}\n{OUT_SEP}', file=out)
+        last_gas = 0.0
+        for wpt, wdist in sorted(track_waypoints[index], key=lambda x: x[1]):
+            print(format_point(wpt, wdist, last_gas), file=out)
+            if gas_reset(wpt, wdist):
+                last_gas = wdist
+
+
+
 
     print(file=out)
     for route in gpx.routes:
