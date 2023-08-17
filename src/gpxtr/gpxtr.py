@@ -203,7 +203,7 @@ def main() -> None:
     parser.add_argument("input", nargs="+", type=argparse.FileType('r'), help="input file(s)")
     parser.add_argument("--html", action='store_true', help="output in HTML, not markdown")
     parser.add_argument("--output", type=argparse.FileType('w'), default=None, help="output file")
-    parser.add_argument("--sort", default='', help="sort algorithm for waypoints")
+    parser.add_argument("--sort", default=None, help="sort algorithm for waypoints")
     args = parser.parse_args()
 
     out = args.output
@@ -212,9 +212,12 @@ def main() -> None:
         final_out = out
         out = io.StringIO()
 
+    if args.sort:
+        args.sort = args.sort.split(',')
+
     for handle in args.input:
         with handle as stream:
-            print_table(gpxpy.parse(stream), sort=args.sort.split(','), out=out)
+            print_table(gpxpy.parse(stream), sort=args.sort, out=out)
 
     if args.html:
         print(markdown2.markdown(out.getvalue(), extras=["tables"]), file=final_out)
