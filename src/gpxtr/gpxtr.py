@@ -98,6 +98,7 @@ def geodata_tracks(tracks: list[GPXTrack]) -> gpd.GeoDataFrame:
     for track in tracks:
         track_distance = 0.0
         last = track.segments[0].points[0]
+        track_length = track.length_2d() / 1000. * KM_TO_MILES
         for segment in track.segments:
             for point in segment.points:
                 delta = distance(last.latitude, last.longitude, None, point.latitude, point.longitude, None) / 1000 * KM_TO_MILES
@@ -105,9 +106,9 @@ def geodata_tracks(tracks: list[GPXTrack]) -> gpd.GeoDataFrame:
                 total_distance += delta
                 last = point
                 tracks_points.append([Point(point.latitude, point.longitude),
-                                    track_distance, total_distance])
+                                    track_distance, total_distance, track_length])
     return gpd.GeoDataFrame(tracks_points,
-                            columns=['geometry', 'track_distance', 'total_distance'],
+                            columns=['geometry', 'track_distance', 'total_distance', 'track_length'],
                             crs="EPSG:4326") # type: ignore
 
 def geodata_points(points: Union[list[GPXWaypoint], list[GPXRoutePoint]]) -> gpd.GeoDataFrame:
@@ -138,12 +139,20 @@ def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=Non
 
 def gas_reset(point) -> str:
     return 'G' if (point.symbol and
-                   'Gas Station' in point.symbol or
-                   point.track_distance == 0) else ''
+                   'Gas Station' in point.symbol) else ''
+
+def waypoint_from_point(point, name, symbol=None):
+    waypoint = GPXWaypoint()
+    waypoint.latitude = point.latitude
+    waypoint.longitude = point.longitude
+    waypoint.name = name
+    waypoint.symbol = symbol
+    return waypoint
+
 
 OUT_HDR = '|        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
 OUT_SEP = '| :------------------: | :----------------------------- | ------: | - | ----: | :----'
-OUT_FMT = '| {:-10.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
+OUT_FMT = '| {:-10.4f},{:.4f} | {:30.30} | {:>7} | {:1} | {:>5} | {}{}'
 
 def format_point(point, last_gas) -> str:
     departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
@@ -152,7 +161,9 @@ def format_point(point, last_gas) -> str:
     return OUT_FMT.format(
         point.geometry.x, point.geometry.y,
         (point.name or '').replace('\n', ' '),
-        f'{round(point.track_distance - last_gas):.0f}/{round(point.track_distance):.0f}' if point.track_distance and gas_reset(point) else f'{round(point.track_distance):.0f}',
+        f'{round(point.track_distance - last_gas):.0f}/{round(point.track_distance):.0f}' if
+            gas_reset(point) or
+            abs(point.track_distance - point.track_length) < 1.0 else f'{round(point.track_distance):.0f}',
         gas_reset(point) or ' ',
         departure.strftime('%H:%M') if departure else '',
         point.symbol or '',
@@ -166,6 +177,10 @@ def print_table(gpx, sort=None, out=None) -> None:
 
     if not gpx.tracks:
         raise GPXException("no track data present to compute distance")
+
+    for track in gpx.tracks:
+#        gpx.waypoints.append(waypoint_from_point(track.segments[0].points[0], f'START: {track.name}', 'START'))
+        gpx.waypoints.append(waypoint_from_point(track.segments[-1].points[-1], f'END: {track.name}', 'END'))
 
     gd_tracks = geodata_tracks(gpx.tracks)
 
