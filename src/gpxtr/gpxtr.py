@@ -17,7 +17,7 @@ import markdown2
 import numpy as np
 import pandas as pd
 
-from gpxpy.gpx import GPXTrack, GPXWaypoint, GPXRoutePoint
+from gpxpy.gpx import GPXTrack, GPXWaypoint, GPXRoutePoint, GPXException
 from gpxpy.geo import distance
 from scipy.spatial import cKDTree
 from shapely.geometry import Point
@@ -164,19 +164,25 @@ def print_table(gpx, sort=None, out=None) -> None:
     if gpx.creator:
         print(f'## {gpx.creator}', file=out)
 
+    if not gpx.tracks:
+        raise GPXException("no track data present to compute distance")
+
     gd_tracks = geodata_tracks(gpx.tracks)
-    gd_waypoints = geodata_points(gpx.waypoints)
-    gd_merged = geodata_nearest(gd_waypoints, gd_tracks, sort=sort)
 
-    print('## Waypoints', file=out)
-    print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
-    last_gas = 0.0
-    for point in gd_merged.itertuples():
-        print(format_point(point, last_gas), file=out)
-        if gas_reset(point):
-            last_gas = point.track_distance
+    if gpx.waypoints:
+        gd_waypoints = geodata_points(gpx.waypoints)
+        gd_merged = geodata_nearest(gd_waypoints, gd_tracks, sort=sort)
 
-    print(file=out)
+        print('## Waypoints', file=out)
+        print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
+        last_gas = 0.0
+        for point in gd_merged.itertuples():
+            print(format_point(point, last_gas), file=out)
+            if gas_reset(point):
+                last_gas = point.track_distance
+
+        print(file=out)
+
     for route in gpx.routes:
         if route.name:
             print(f'## {route.name}', file=out)
@@ -217,7 +223,10 @@ def main() -> None:
 
     for handle in args.input:
         with handle as stream:
-            print_table(gpxpy.parse(stream), sort=args.sort, out=out)
+            try:
+                print_table(gpxpy.parse(stream), sort=args.sort, out=out)
+            except GPXException as err:
+                raise SystemExit(f'{handle.name}: {err}') from err
 
     if args.html:
         print(markdown2.markdown(out.getvalue(), extras=["tables"]), file=final_out)
