@@ -136,7 +136,9 @@ def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=Non
             pd.Series(dist, name='nearest')
         ],
         axis=1)
-    return dataframe.sort_values(by=(sort or ['total_distance', 'name']))
+    if sort:
+        dataframe = dataframe.sort_values(by=sort)
+    return dataframe
 
 def is_gas(point) -> str:
     if point.symbol and 'Gas Station' in point.symbol:
@@ -187,8 +189,7 @@ def format_route_point(point: GPXRoutePoint, last_gas: float, dist: float, last_
 
 def print_route_table(gpx, out=None) -> None:
     for route in gpx.routes:
-        if route.name:
-            print(f'## {route.name}', file=out)
+        print(f'\n## Route: {route.name}', file=out)
         if route.description:
             print(f'- {route.description}', file=out)
         print(f'- {sun_rise_set(route)}', file=out)
@@ -208,6 +209,7 @@ def print_route_table(gpx, out=None) -> None:
                     current = float(extension_point.get('lat')), float(extension_point.get('lon'))
                     dist += distance(previous[0], previous[1], None, current[0], current[1], None) / 1000 * KM_TO_MILES
                     previous = current
+            previous = current
 
 def print_wpt_table(gpx, sort=None, out=None) -> None:
     for track in gpx.tracks:
@@ -238,7 +240,7 @@ def print_gpx(gpx, sort=None, out=None) -> None:
     if dist:
         print(f'- Total distance: {format_long_length(dist, True)}', file=out)
     print_wpt_table(gpx, sort=sort, out=out)
-    print_route_table(gpx)
+    print_route_table(gpx, out=out)
 
 def main() -> None:
     parser = argparse.ArgumentParser()
