@@ -25,7 +25,8 @@ from shapely.geometry import Point
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
 NAMESPACE = {
-    'trp': 'http://www.garmin.com/xmlschemas/TripExtensions/v1'
+    'trp':  'http://www.garmin.com/xmlschemas/TripExtensions/v1',
+    'gpxx': 'http://www.garmin.com/xmlschemas/GpxExtensions/v3',
 }
 
 def format_time(time_s: float, seconds: bool) -> str:
@@ -137,9 +138,10 @@ def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=Non
         axis=1)
     return dataframe.sort_values(by=(sort or ['total_distance', 'name']))
 
-def gas_reset(point) -> str:
-    return 'G' if (point.symbol and
-                   'Gas Station' in point.symbol) else ''
+def is_gas(point) -> str:
+    if point.symbol and 'Gas Station' in point.symbol:
+        return 'G'
+    return ''
 
 def waypoint_from_point(point, name, symbol=None):
     waypoint = GPXWaypoint()
@@ -149,82 +151,101 @@ def waypoint_from_point(point, name, symbol=None):
     waypoint.symbol = symbol
     return waypoint
 
-
 OUT_HDR = '|        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
 OUT_SEP = '| :------------------: | :----------------------------- | ------: | - | ----: | :----'
 OUT_FMT = '| {:-10.4f},{:.4f} | {:30.30} | {:>7} | {:1} | {:>5} | {}{}'
 
-def format_point(point, last_gas) -> str:
-    departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
+def format_point(point, last_gas: float) -> str:
+    departure = point.departure.to_pydatetime() if point.departure not in [pd.NaT, None] else None
     if last_gas > point.track_distance:   # assume we have filled up between segments
         last_gas = 0.0
     return OUT_FMT.format(
         point.geometry.x, point.geometry.y,
         (point.name or '').replace('\n', ' '),
         f'{round(point.track_distance - last_gas):.0f}/{round(point.track_distance):.0f}' if
-            gas_reset(point) or
+            is_gas(point) or
             abs(point.track_distance - point.track_length) < 1.0 else f'{round(point.track_distance):.0f}',
-        gas_reset(point) or ' ',
-        departure.strftime('%H:%M') if departure else '',
+        is_gas(point) or ' ',
+        departure.astimezone().strftime('%H:%M') if departure else '',
         point.symbol or '',
         f' ({point.layover})' if point.layover else '')
 
-def print_table(gpx, sort=None, out=None) -> None:
-    if gpx.name:
-        print(f'# {gpx.name}', file=out)
-    if gpx.creator:
-        print(f'## {gpx.creator}', file=out)
+def format_route_point(point: GPXRoutePoint, last_gas: float, dist: float, last_point: bool) -> str:
+    departure = departure_time(point)
+    lay = layover(point)
+    if last_gas > dist:
+        last_gas = 0.0
+    return OUT_FMT.format(
+        point.latitude, point.longitude,
+        (point.name or '').replace('\n', ' '),
+        f'{round(dist - last_gas):.0f}/{dist:.0f}' if is_gas(point) or last_point
+            else f'{round(dist):.0f}',
+        is_gas(point) or ' ',
+        departure.astimezone().strftime('%H:%M') if departure else '',
+        point.symbol or '',
+        f' ({lay})' if lay else '')
 
-    if not gpx.tracks:
-        raise GPXException("no track data present to compute distance")
+def print_route_table(gpx, out=None) -> None:
+    for route in gpx.routes:
+        if route.name:
+            print(f'## {route.name}', file=out)
+        if route.description:
+            print(f'- {route.description}', file=out)
+        print(f'- {sun_rise_set(route)}', file=out)
+        print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
+        dist = 0.0
+        previous = route.points[0].latitude, route.points[0].longitude
+        last_gas = 0.0
+        for point in route.points:
+            if not shaping_point(point):
+                print(format_route_point(point, last_gas, dist, point is route.points[-1]), file=out)
+            if is_gas(point):
+                last_gas = dist
+            current = point.latitude, point.longitude
+            dist += distance(previous[0], previous[1], None, current[0], current[1], None) / 1000 * KM_TO_MILES
+            for extension in point.extensions:
+                for extension_point in extension.findall('gpxx:rpt', NAMESPACE):
+                    current = float(extension_point.get('lat')), float(extension_point.get('lon'))
+                    dist += distance(previous[0], previous[1], None, current[0], current[1], None) / 1000 * KM_TO_MILES
+                    previous = current
 
+def print_wpt_table(gpx, sort=None, out=None) -> None:
     for track in gpx.tracks:
-#        gpx.waypoints.append(waypoint_from_point(track.segments[0].points[0], f'START: {track.name}', 'START'))
+#       gpx.waypoints.append(waypoint_from_point(track.segments[0].points[0], f'START: {track.name}', 'START'))
         gpx.waypoints.append(waypoint_from_point(track.segments[-1].points[-1], f'END: {track.name}', 'END'))
 
-    gd_tracks = geodata_tracks(gpx.tracks)
-
-    if gpx.waypoints:
+    if gpx.waypoints and gpx.tracks:
+        gd_tracks = geodata_tracks(gpx.tracks)
         gd_waypoints = geodata_points(gpx.waypoints)
         gd_merged = geodata_nearest(gd_waypoints, gd_tracks, sort=sort)
-
         print('## Waypoints', file=out)
         print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
         last_gas = 0.0
         for point in gd_merged.itertuples():
             print(format_point(point, last_gas), file=out)
-            if gas_reset(point):
+            if is_gas(point):
                 last_gas = point.track_distance
 
-        print(file=out)
-
-    for route in gpx.routes:
-        if route.name:
-            print(f'## {route.name}', file=out)
-        if route.description:
-            print(f'### {route.description}', file=out)
-        print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
-        gd_route_points = geodata_points([point for point in route.points if not shaping_point(point)])
-        gd_merged = geodata_nearest(gd_route_points, gd_tracks)
-        last_gas = 0.0
-        for point in gd_merged.itertuples():
-            print(format_point(point, last_gas), file=out)
-            if gas_reset(point):
-                last_gas = point.track_distance
-
-        print(f'\n- {sun_rise_set(route)}', file=out)
-
+def print_gpx(gpx, sort=None, out=None) -> None:
+    if gpx.name:
+        print(f'# {gpx.name}', file=out)
+    if gpx.creator:
+        print(f'- {gpx.creator}', file=out)
     move_data = gpx.get_moving_data()
     if move_data and move_data.moving_time:
         print(f'- Total moving time: {format_time(move_data.moving_time, False)}', file=out)
-    print(f'- Total distance: {format_long_length(gpx.length_2d(), True)}', file=out)
+    dist = gpx.length_2d()
+    if dist:
+        print(f'- Total distance: {format_long_length(dist, True)}', file=out)
+    print_wpt_table(gpx, sort=sort, out=out)
+    print_route_table(gpx)
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", nargs="+", type=argparse.FileType('r'), help="input file(s)")
     parser.add_argument("--html", action='store_true', help="output in HTML, not markdown")
     parser.add_argument("--output", type=argparse.FileType('w'), default=None, help="output file")
-    parser.add_argument("--sort", default=None, help="sort algorithm for waypoints")
+    parser.add_argument("--sort", default=None, help="sort algorithm for waypoints (only)")
     args = parser.parse_args()
 
     out = args.output
@@ -239,7 +260,7 @@ def main() -> None:
     for handle in args.input:
         with handle as stream:
             try:
-                print_table(gpxpy.parse(stream), sort=args.sort, out=out)
+                print_gpx(gpxpy.parse(stream), sort=args.sort, out=out)
             except GPXException as err:
                 raise SystemExit(f'{handle.name}: {err}') from err
 
