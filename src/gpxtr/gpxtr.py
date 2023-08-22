@@ -141,9 +141,9 @@ def gas_reset(point) -> str:
                    'Gas Station' in point.symbol or
                    point.track_distance == 0) else ''
 
-OUT_HDR = '|      Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
-OUT_SEP = '| :----------------: | :----------------------------- | ------: | - | ----: | :----'
-OUT_FMT = '| {:-8.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
+OUT_HDR = '|        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
+OUT_SEP = '| :------------------: | :----------------------------- | ------: | - | ----: | :----'
+OUT_FMT = '| {:-10.4f},{:.4f} | {:30.30} | {:>7} | {} | {:>5} | {}{}'
 
 def format_point(point, last_gas) -> str:
     departure = point.departure.to_pydatetime().astimezone() if point.departure not in [pd.NaT, None] else None
