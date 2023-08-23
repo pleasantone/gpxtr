@@ -6,7 +6,8 @@ create a markdown template from a Garmin GPX file for route information
 import argparse
 import io
 import math
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Optional, Union
 
 import astral
@@ -28,6 +29,8 @@ NAMESPACE = {
     'trp':  'http://www.garmin.com/xmlschemas/TripExtensions/v1',
     'gpxx': 'http://www.garmin.com/xmlschemas/GpxExtensions/v3',
 }
+
+TRAVEL_SPEED = 30.0 # mph
 
 def format_time(time_s: float, seconds: bool) -> str:
     if not time_s:
@@ -66,18 +69,22 @@ def shaping_point(point) -> bool:
             return True
     return False
 
-def layover(point) -> str:
+def layover(point: GPXRoutePoint) -> timedelta:
     """ layover time at a given RoutePoint (Basecamp extension) """
     for extension in point.extensions:
         for duration in extension.findall('trp:StopDuration', NAMESPACE):
-            return duration.text.replace('PT', '+').lower()
-    return ''
+            match = re.match(r'^PT((\d)+H)?((\d)+M)?$', duration.text)
+            if match:
+                return timedelta(hours=int(match.group(2) or '0'),
+                                 minutes=int(match.group(4) or '0'))
+    return timedelta()
 
-def departure_time(point) -> Optional[datetime]:
+def departure_time(point: Union[GPXWaypoint, GPXRoutePoint]) -> Optional[datetime]:
     """ returns datetime object for route point with departure times or None """
     for extension in point.extensions:
         for departure in extension.findall('trp:DepartureTime', NAMESPACE):
             return datetime.fromisoformat(departure.text.replace('Z', '+00:00'))
+    return None
 
 def start_point(route) -> tuple[float, float, Optional[datetime]]:
     """ what is the start location of the route, and what's the departure time? """
@@ -102,7 +109,8 @@ def geodata_tracks(tracks: list[GPXTrack]) -> gpd.GeoDataFrame:
         track_length = track.length_2d() / 1000. * KM_TO_MILES
         for segment in track.segments:
             for point in segment.points:
-                delta = distance(last.latitude, last.longitude, None, point.latitude, point.longitude, None) / 1000 * KM_TO_MILES
+                delta = distance(last.latitude, last.longitude, None,
+                                 point.latitude, point.longitude, None) / 1000 * KM_TO_MILES
                 track_distance += delta
                 total_distance += delta
                 last = point
@@ -117,10 +125,9 @@ def geodata_points(points: Union[list[GPXWaypoint], list[GPXRoutePoint]]) -> gpd
     for point in points:
         waypoints.append([Point(point.latitude, point.longitude),
                          point.name, point.symbol,
-                         departure_time(point) or pd.NaT,
-                         layover(point)])
+                         departure_time(point) or pd.NaT])
     return gpd.GeoDataFrame(waypoints,
-                            columns=['geometry', 'name', 'symbol', 'departure', 'layover'],
+                            columns=['geometry', 'name', 'symbol', 'departure'],
                             crs="EPSG:4326") # type: ignore
 
 def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=None) -> pd.DataFrame:
@@ -170,11 +177,11 @@ def format_point(point, last_gas: float) -> str:
         is_gas(point) or ' ',
         departure.astimezone().strftime('%H:%M') if departure else '',
         point.symbol or '',
-        f' ({point.layover})' if point.layover else '')
+        '')
 
-def format_route_point(point: GPXRoutePoint, last_gas: float, dist: float, last_point: bool) -> str:
-    departure = departure_time(point)
-    lay = layover(point)
+def format_route_point(point: GPXRoutePoint, last_gas: float, dist: float,
+                       timing: Optional[datetime], delay: Optional[timedelta],
+                       last_point: bool) -> str:
     if last_gas > dist:
         last_gas = 0.0
     return OUT_FMT.format(
@@ -183,9 +190,9 @@ def format_route_point(point: GPXRoutePoint, last_gas: float, dist: float, last_
         f'{round(dist - last_gas):.0f}/{dist:.0f}' if is_gas(point) or last_point
             else f'{round(dist):.0f}',
         is_gas(point) or ' ',
-        departure.astimezone().strftime('%H:%M') if departure else '',
+        timing.astimezone().strftime('%H:%M') if timing else '',
         point.symbol or '',
-        f' ({lay})' if lay else '')
+        f' (+{str(delay)[:-3]})' if delay else '')
 
 def print_route_table(gpx, out=None) -> None:
     for route in gpx.routes:
@@ -197,24 +204,40 @@ def print_route_table(gpx, out=None) -> None:
         dist = 0.0
         previous = route.points[0].latitude, route.points[0].longitude
         last_gas = 0.0
+        timing = departure_time(route.points[0])
+        last_display_distance = 0.0
         for point in route.points:
             if not shaping_point(point):
-                print(format_route_point(point, last_gas, dist, point is route.points[-1]), file=out)
+                if timing:
+                    timing += timedelta(minutes=(dist - last_display_distance) * (60.0 / TRAVEL_SPEED))
+                last_display_distance = dist
+                departure = departure_time(point)
+                if departure:
+                    timing = departure
+                delay = layover(point)
+                print(format_route_point(point, last_gas, dist, timing, delay,
+                                         point is route.points[-1]), file=out)
+                if timing:
+                    timing += delay
             if is_gas(point):
                 last_gas = dist
             current = point.latitude, point.longitude
-            dist += distance(previous[0], previous[1], None, current[0], current[1], None) / 1000 * KM_TO_MILES
+            dist += distance(previous[0], previous[1], None,
+                             current[0], current[1], None) / 1000 * KM_TO_MILES
             for extension in point.extensions:
                 for extension_point in extension.findall('gpxx:rpt', NAMESPACE):
                     current = float(extension_point.get('lat')), float(extension_point.get('lon'))
-                    dist += distance(previous[0], previous[1], None, current[0], current[1], None) / 1000 * KM_TO_MILES
+                    dist += distance(previous[0], previous[1], None,
+                                     current[0], current[1], None) / 1000 * KM_TO_MILES
                     previous = current
             previous = current
 
 def print_wpt_table(gpx, sort=None, out=None) -> None:
     for track in gpx.tracks:
-#       gpx.waypoints.append(waypoint_from_point(track.segments[0].points[0], f'START: {track.name}', 'START'))
-        gpx.waypoints.append(waypoint_from_point(track.segments[-1].points[-1], f'END: {track.name}', 'END'))
+#       gpx.waypoints.append(waypoint_from_point(track.segments[0].points[0],
+#                            f'START: {track.name}', 'START'))
+        gpx.waypoints.append(waypoint_from_point(track.segments[-1].points[-1],
+                             f'END: {track.name}', 'END'))
 
     if gpx.waypoints and gpx.tracks:
         gd_tracks = geodata_tracks(gpx.tracks)
