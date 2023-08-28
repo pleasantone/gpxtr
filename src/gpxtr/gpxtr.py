@@ -20,7 +20,7 @@ import markdown2
 import numpy as np
 import pandas as pd
 
-from gpxpy.gpx import GPXTrack, GPXWaypoint, GPXRoutePoint, GPXException
+from gpxpy.gpx import GPX, GPXTrack, GPXWaypoint, GPXRoutePoint, GPXException
 from gpxpy.geo import distance
 from scipy.spatial import cKDTree
 from shapely.geometry import Point
@@ -39,18 +39,19 @@ class GPXCalculator:
     }
 
     DEFAULT_TRAVEL_SPEED = 30.0 # mph
-    DEFAULT_DELAYS = {
+    DEFAULT_WAYPOINT_DELAYS = {
         "Restaurant":   timedelta(minutes=60),
         "Gas Station":  timedelta(minutes=15),
         "Restroom":     timedelta(minutes=15),
         "Photo":        timedelta(minutes=5)
     }
 
-    def __init__(self, gpx):
+    def __init__(self, gpx: GPX, miles=True, speed=None, departure=None, waypoint_delays=None) -> None:
         self.gpx = gpx
-        self.speed = self.DEFAULT_TRAVEL_SPEED
-        self.miles = True
-        self.depart_at = None
+        self.speed = speed or self.DEFAULT_TRAVEL_SPEED
+        self.miles = miles
+        self.depart_at = departure
+        self.waypoint_delays = waypoint_delays or self.DEFAULT_WAYPOINT_DELAYS
 
     def print_header(self, out=None) -> None:
         if self.gpx.name:
@@ -65,7 +66,7 @@ class GPXCalculator:
             print(f'- Total distance: {self.format_long_length(dist)}', file=out)
 
     def symbol_delay(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> timedelta:
-        return self.DEFAULT_DELAYS.get(point.symbol or 'nil') or timedelta()
+        return self.waypoint_delays.get(point.symbol or 'nil') or timedelta()
 
     def print_waypoints(self, sort=None, out=None) -> None:
         def _wpe() -> str:
