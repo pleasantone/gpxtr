@@ -18,6 +18,7 @@ classifiers = [
 ]
 dependencies = [
     "astral",
+    "dateutil",
     "geopandas",
     "gpxpy",
     "haversine",

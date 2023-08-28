@@ -12,6 +12,8 @@ from typing import Optional, Union
 
 import astral
 import astral.sun
+import dateutil.parser
+import dateutil.tz
 import geopandas as gpd
 import gpxpy
 import markdown2
@@ -37,11 +39,18 @@ class GPXCalculator:
     }
 
     DEFAULT_TRAVEL_SPEED = 30.0 # mph
+    DEFAULT_DELAYS = {
+        "Restaurant":   timedelta(minutes=60),
+        "Gas Station":  timedelta(minutes=15),
+        "Restroom":     timedelta(minutes=15),
+        "Photo":        timedelta(minutes=5)
+    }
 
     def __init__(self, gpx):
         self.gpx = gpx
         self.speed = self.DEFAULT_TRAVEL_SPEED
-        self.imperial = True
+        self.miles = True
+        self.depart_at = None
 
     def print_header(self, out=None) -> None:
         if self.gpx.name:
@@ -53,11 +62,13 @@ class GPXCalculator:
             print(f'- Total moving time: {self.format_time(move_data.moving_time, False)}', file=out)
         dist = self.gpx.length_2d()
         if dist:
-            print(f'- Total distance: {self.format_long_length(dist, True)}', file=out)
+            print(f'- Total distance: {self.format_long_length(dist)}', file=out)
+
+    def symbol_delay(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> timedelta:
+        return self.DEFAULT_DELAYS.get(point.symbol or 'nil') or timedelta()
 
     def print_waypoints(self, sort=None, out=None) -> None:
         def _wpe() -> str:
-            departure = point.departure.to_pydatetime() if point.departure not in [pd.NaT, None] else None
             return self.OUT_FMT.format(
                 point.geometry.x, point.geometry.y,
                 (point.name or '').replace('\n', ' '),
@@ -67,15 +78,10 @@ class GPXCalculator:
                 self.is_gas(point) or ' ',
                 departure.astimezone().strftime('%H:%M') if departure else '',
                 point.symbol or '',
-                '')
+                f' (+{str(self.symbol_delay(point))[:-3]})' if not first_point else '')
 
         def _waypoint_from_point(point, name, symbol=None):
-            waypoint = GPXWaypoint()
-            waypoint.latitude = point.latitude
-            waypoint.longitude = point.longitude
-            waypoint.name = name
-            waypoint.symbol = symbol
-            return waypoint
+            return GPXWaypoint(point.latitude, point.longitude, name=name, symbol=symbol)
 
         def geodata_tracks(tracks: list[GPXTrack]) -> gpd.GeoDataFrame:
             tracks_points = []
@@ -101,10 +107,9 @@ class GPXCalculator:
             waypoints = []
             for point in points:
                 waypoints.append([Point(point.latitude, point.longitude),
-                                point.name, point.symbol,
-                                self.departure_time(point) or pd.NaT])
+                                point.name, point.symbol])
             return gpd.GeoDataFrame(waypoints,
-                                    columns=['geometry', 'name', 'symbol', 'departure'],
+                                    columns=['geometry', 'name', 'symbol'],
                                     crs="EPSG:4326") # type: ignore
 
         def geodata_nearest(points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort=None) -> pd.DataFrame:
@@ -130,18 +135,23 @@ class GPXCalculator:
             self.gpx.waypoints.append(_waypoint_from_point(track.segments[-1].points[-1],
                 f'END: {track.name}', 'END'))
         if self.gpx.waypoints and self.gpx.tracks:
-            gd_tracks = geodata_tracks(self.gpx.tracks)
-            gd_waypoints = geodata_points(self.gpx.waypoints)
-            merged = geodata_nearest(gd_waypoints, gd_tracks, sort=sort)
             print('## Waypoints', file=out)
             print(f'\n{self.OUT_HDR}\n{self.OUT_SEP}', file=out)
             last_gas = 0.0
-            for point in merged.itertuples():
+            start_time = self.depart_at
+            first_point = True
+            for point in geodata_nearest(geodata_points(self.gpx.waypoints),
+                                         geodata_tracks(self.gpx.tracks), sort=sort).itertuples():
+                departure = start_time + timedelta(minutes=point.track_distance * 60.0 / self.speed) if start_time else None
                 if last_gas > point.track_distance:   # assume we have filled up between segments
                     last_gas = 0.0
                 print(_wpe(), file=out)
                 if self.is_gas(point):
                     last_gas = point.track_distance
+                delay = self.symbol_delay(point) if not first_point else None
+                if delay and start_time:
+                    start_time += delay
+                first_point = False
 
     def print_routes(self, out=None):
         def _rpe() -> str:
@@ -159,12 +169,12 @@ class GPXCalculator:
             print(f'\n## Route: {route.name}', file=out)
             if route.description:
                 print(f'- {route.description}', file=out)
-            print(f'- {self.sun_rise_set(route)}', file=out)
+            print(f'- {self.sun_rise_set(route.points[0])}', file=out)
             print(f'\n{self.OUT_HDR}\n{self.OUT_SEP}', file=out)
             dist = 0.0
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
-            timing = self.departure_time(route.points[0])
+            timing = self.departure_time(route.points[0]) or self.depart_at
             last_display_distance = 0.0
             for point in route.points:
                 if not self.shaping_point(point):
@@ -193,8 +203,8 @@ class GPXCalculator:
                         previous = current
                 previous = current
 
-    @classmethod
-    def format_time(cls, time_s: float, seconds: bool) -> str:
+    @staticmethod
+    def format_time(time_s: float, seconds: bool) -> str:
         if not time_s:
             return 'n/a'
         if seconds:
@@ -203,25 +213,51 @@ class GPXCalculator:
         hours = math.floor(minutes / 60.)
         return f'{int(hours):02d}:{int(minutes % 60):02d}:{int(time_s % 60):02d}'
 
-    @classmethod
-    def format_long_length(cls, length: float, miles: bool) -> str:
-        if miles:
-            return f'{length / 1000. * cls.KM_TO_MILES:.2f} mi'
+    def format_long_length(self, length: float) -> str:
+        if self.miles:
+            return f'{length / 1000. * self.KM_TO_MILES:.2f} mi'
         return f'{length/ 1000.:.2f} km'
 
-    @classmethod
-    def format_short_length(cls, length: float, miles: bool) -> str:
-        if miles:
-            return f'{length * cls.M_TO_FEET:.2f} ft'
+    def format_short_length(self, length: float) -> str:
+        if self.miles:
+            return f'{length * self.M_TO_FEET:.2f} ft'
         return f'{length:.2f} m'
 
-    @classmethod
-    def format_speed(cls, speed: float, miles: bool) -> str:
+    def format_speed(self, speed: float) -> str:
         if not speed:
             speed = 0
-        if miles:
-            return f'{speed * cls.KM_TO_MILES * 3600. / 1000.:.2f} mph'
+        if self.miles:
+            return f'{speed * self.KM_TO_MILES * 3600. / 1000.:.2f} mph'
         return f'{speed:.2f}m/s = {speed * 3600. / 1000.:.2f} km/h'
+
+    def layover(self, point: GPXRoutePoint) -> timedelta:
+        """ layover time at a given RoutePoint (Basecamp extension) """
+        for extension in point.extensions:
+            for duration in extension.findall('trp:StopDuration', self.XML_NAMESPACE):
+                match = re.match(r'^PT((\d+)H)?((\d+)M)?$', duration.text)
+                if match:
+                    return timedelta(hours=int(match.group(2) or '0'), minutes=int(match.group(4) or '0'))
+        return timedelta()
+
+    def departure_time(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> Optional[datetime]:
+        """ returns datetime object for route point with departure times or None """
+        for extension in point.extensions:
+            for departure in extension.findall('trp:DepartureTime', self.XML_NAMESPACE):
+                return datetime.fromisoformat(departure.text.replace('Z', '+00:00'))
+        return None
+
+    def sun_rise_set(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+        """ return sunrise/sunset info based upon the route start point """
+        start = astral.LocationInfo("Start Point", "", "", point.latitude, point.longitude)
+        sun = astral.sun.sun(start.observer, date=self.departure_time(point))
+        return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
+                f'Sunset: {sun["sunset"].astimezone():%H:%M}')
+
+    @staticmethod
+    def is_gas(point) -> str:
+        if point.symbol and 'Gas Station' in point.symbol:
+            return 'G'
+        return ''
 
     @staticmethod
     def shaping_point(point) -> bool:
@@ -235,44 +271,10 @@ class GPXCalculator:
                 return True
         return False
 
-    @classmethod
-    def layover(cls, point: GPXRoutePoint) -> timedelta:
-        """ layover time at a given RoutePoint (Basecamp extension) """
-        for extension in point.extensions:
-            for duration in extension.findall('trp:StopDuration', cls.XML_NAMESPACE):
-                match = re.match(r'^PT((\d)+H)?((\d)+M)?$', duration.text)
-                if match:
-                    return timedelta(hours=int(match.group(2) or '0'),
-                                    minutes=int(match.group(4) or '0'))
-        return timedelta()
 
-    @classmethod
-    def departure_time(cls, point: Union[GPXWaypoint, GPXRoutePoint]) -> Optional[datetime]:
-        """ returns datetime object for route point with departure times or None """
-        for extension in point.extensions:
-            for departure in extension.findall('trp:DepartureTime', cls.XML_NAMESPACE):
-                return datetime.fromisoformat(departure.text.replace('Z', '+00:00'))
-        return None
-
-    def start_point(self, route) -> tuple[float, float, Optional[datetime]]:
-        """ what is the start location of the route, and what's the departure time? """
-        for point in route.points:
-            return(point.latitude, point.longitude, self.departure_time(point))
-        return (0.0, 0.0, None)
-
-    def sun_rise_set(self, route) -> str:
-        """ return sunrise/sunset info based upon the route start point """
-        lat, lon, start_date = self.start_point(route)
-        start = astral.LocationInfo("Start Point", "", "", lat, lon)
-        sun = astral.sun.sun(start.observer, date=start_date)
-        return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
-                f'Sunset: {sun["sunset"].astimezone():%H:%M}')
-
-    @staticmethod
-    def is_gas(point) -> str:
-        if point.symbol and 'Gas Station' in point.symbol:
-            return 'G'
-        return ''
+class DateParser(argparse.Action):
+    def __call__(self, parser, namespace, values, option_strings=None):
+        setattr(namespace, self.dest, dateutil.parser.parse(values, default=datetime.now(dateutil.tz.tzlocal())))
 
 
 def main() -> None:
@@ -281,7 +283,13 @@ def main() -> None:
     parser.add_argument("--html", action='store_true', help="output in HTML, not markdown")
     parser.add_argument("--output", type=argparse.FileType('w'), default=None, help="output file")
     parser.add_argument("--sort", default=None, help="sort algorithm for waypoints (only)")
-    args = parser.parse_args()
+    parser.add_argument("--departure", default=None, action=DateParser, help="set departure time for first point")
+    parser.add_argument("--speed", default=None, type=float, help="set average travel speed")
+
+    try:
+        args = parser.parse_args()
+    except ValueError as err:
+        raise SystemExit(err) from err
 
     out = args.output
     final_out = None
@@ -296,6 +304,9 @@ def main() -> None:
         with handle as stream:
             try:
                 table = GPXCalculator(gpxpy.parse(stream))
+                table.depart_at = args.departure
+                if args.speed:
+                    table.speed = args.speed
                 table.print_header(out=out)
                 table.print_waypoints(sort=args.sort, out=out)
                 table.print_routes(out=out)

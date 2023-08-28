@@ -2,6 +2,7 @@
     "cSpell.words": [
         "argmin",
         "dataframe",
+        "dateutil",
         "geopandas",
         "gpxpy",
         "gpxtr",
@@ -14,6 +15,7 @@
         "Northgate",
         "Peet's",
         "pydatetime",
-        "scipy"
+        "scipy",
+        "tzlocal"
     ]
 }
