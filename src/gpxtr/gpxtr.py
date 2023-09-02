@@ -20,7 +20,7 @@ import markdown2
 import numpy as np
 import pandas as pd
 
-from gpxpy.gpx import GPX, GPXTrack, GPXWaypoint, GPXRoutePoint, GPXException
+from gpxpy.gpx import GPX, GPXTrack, GPXWaypoint, GPXRoutePoint, GPXTrackPoint, GPXException
 from gpxpy.geo import distance
 from scipy.spatial import cKDTree
 from shapely.geometry import Point
@@ -87,6 +87,7 @@ class GPXTableCalculator:
             self.gpx.waypoints.append(self.waypoint_from_point(track.segments[-1].points[-1],
                 f'END: {track.name}', 'END'))
         if self.gpx.waypoints and self.gpx.tracks:
+            print(f'- {self.sun_rise_set(self.gpx.tracks[0].segments[0].points[0])}', file=out)
             print('## Waypoints', file=out)
             print(f'\n{OUT_HDR}\n{OUT_SEP}', file=out)
             last_gas = 0.0
@@ -253,23 +254,23 @@ class GPXTableCalculator:
         return timedelta()
 
     @staticmethod
-    def departure_time(point: Union[GPXWaypoint, GPXRoutePoint]) -> Optional[datetime]:
+    def departure_time(point: Union[GPXWaypoint, GPXRoutePoint, GPXTrackPoint]) -> Optional[datetime]:
         """ returns datetime object for route point with departure times or None """
         for extension in point.extensions:
             for departure in extension.findall('trp:DepartureTime', XML_NAMESPACE):
                 return datetime.fromisoformat(departure.text.replace('Z', '+00:00'))
         return None
 
-    def sun_rise_set(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+    def sun_rise_set(self, point: Union[GPXWaypoint, GPXRoutePoint, GPXTrackPoint]) -> str:
         """ return sunrise/sunset info based upon the route start point """
         start = astral.LocationInfo("Start Point", "", "", point.latitude, point.longitude)
-        sun = astral.sun.sun(start.observer, date=self.departure_time(point))
+        sun = astral.sun.sun(start.observer, date=(self.departure_time(point) or self.depart_at))
         return (f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
                 f'Sunset: {sun["sunset"].astimezone():%H:%M}')
 
     @staticmethod
     def is_gas(point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
-        if point.symbol and 'Gas Station' in point.symbol:
+        if point.symbol and 'Gas Station' in point.symbol or re.search(r'\bGas\b', point.name or '', re.I):
             return 'G'
         return ''
 
