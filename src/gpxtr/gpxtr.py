@@ -1,4 +1,4 @@
-# pylint: disable=missing-function-docstring,line-too-long
+# pylint: disable=line-too-long, missing-function-docstring
 """
 create a markdown template from a Garmin GPX file for route information
 """
@@ -46,7 +46,7 @@ XML_NAMESPACE = {
 }
 
 class GPXTableCalculator:
-    def __init__(self, gpx: GPX, imperial:bool=True, speed: float=0.0,
+    def __init__(self, gpx: GPX, imperial: bool=True, speed: float=0.0,
                  departure: Optional[datetime]=None, waypoint_delays: Optional[dict]=None) -> None:
         self.gpx = gpx
         self.speed =  (speed / KM_TO_MILES if imperial else speed) or DEFAULT_TRAVEL_SPEED
@@ -324,7 +324,7 @@ def main() -> None:
     for handle in args.input:
         with handle as stream:
             try:
-                table = GPXTableCalculator(gpxpy.parse(stream), speed=args.speed, departure=args.departure)
+                table = GPXTableCalculator(gpxpy.parse(stream), speed=args.speed, departure=args.departure, imperial=not args.metric)
                 table.print_header(out=out)
                 table.print_waypoints(sort=args.sort, out=out)
                 table.print_routes(out=out)
