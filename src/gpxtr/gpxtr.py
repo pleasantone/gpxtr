@@ -1,7 +1,9 @@
 # pylint: disable=line-too-long, missing-function-docstring
 """
-create a markdown template from a Garmin GPX file for route information
+GPXtr - Create a markdown template from a Garmin GPX file for route information
 """
+
+__version__ = "0.1.0"
 
 import argparse
 import io
@@ -46,6 +48,9 @@ XML_NAMESPACE = {
 }
 
 class GPXTableCalculator:
+    """
+    Create a waypoint/route-point table based upon GPX information.
+    """
     def __init__(self, gpx: GPX, imperial: bool=True, speed: float=0.0,
                  departure: Optional[datetime]=None, waypoint_delays: Optional[dict]=None) -> None:
         self.gpx = gpx
@@ -55,6 +60,14 @@ class GPXTableCalculator:
         self.waypoint_delays = waypoint_delays or DEFAULT_WAYPOINT_DELAYS
 
     def print_header(self, out: Optional[io.TextIOWrapper]=None) -> None:
+        """
+        Print to stream generic information about the GPX data such as name, creator, and calculation
+        variables.
+
+        :param out: Optional stream, otherwise standard output.
+
+        :return: nothing
+        """
         if self.gpx.name:
             print(f'# {self.gpx.name}', file=out)
         if self.gpx.creator:
@@ -69,6 +82,21 @@ class GPXTableCalculator:
             print(f'- Default speed: {self.format_speed(self.speed, True)}', file=out)
 
     def print_waypoints(self, sort: str='', out: Optional[io.TextIOWrapper]=None) -> None:
+        """
+        Print waypoint information
+
+        Look for all the waypoints associated with tracks present to attempt to reconstruct
+        the order and distance of the waypoints. If a departure time has been set, estimate
+        the arrival time at each waypoint and probable layover times.
+
+        :param sort: Optional comma separate string for waypoint order. May include
+                     'track_distance', 'total_distance', 'name', and 'symbol'.
+                     Defaults to the order waypoints appear in the file.
+
+        :param out: Optional stream, otherwise standard output.
+
+        :return: nothing
+        """
         def _wpe() -> str:
             return OUT_FMT.format(
                 point.geometry.x, point.geometry.y,
@@ -107,6 +135,17 @@ class GPXTableCalculator:
                 first_point = False
 
     def print_routes(self, out: Optional[io.TextIOWrapper]=None) -> None:
+        """
+        Print route points present in GPX routes.
+
+        If Garmin extensions to create "route-tracks" are present will calculate distances, arrival and departure
+        times properly. If the route points have symbols encoded properly, will automatically compute layover
+        estimates as well as gas stops.
+
+        :param out: Optional stream, otherwise standard output.
+
+        :return: nothing
+        """
         def _rpe() -> str:
             return OUT_FMT.format(
                 point.latitude, point.longitude,

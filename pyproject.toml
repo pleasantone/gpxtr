@@ -4,12 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpxtr"
-version = "0.0.1"
 authors = [
   { name="Paul Traina", email="pleasantone@users.noreply.github.com" },
 ]
-description = "A small example package"
-readme = "README.md"
+dynamic = ["version", "description"]
+readme = "README.rst"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",

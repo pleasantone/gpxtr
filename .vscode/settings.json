@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "argmin",
+        "autosummary",
         "dataframe",
         "dateutil",
         "geopandas",
@@ -9,11 +10,13 @@
         "gpxx",
         "Guerneville",
         "iloc",
+        "intersphinx",
         "itertuples",
         "Navaid",
         "Nicasio",
         "Northgate",
         "Peet's",
+        "pleasantone",
         "pydatetime",
         "scipy",
         "tzlocal"
