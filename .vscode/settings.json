@@ -25,6 +25,7 @@
         "pydatetime",
         "quickstart",
         "scipy",
+        "testdata",
         "toctree",
         "tzlocal",
         "venv"
