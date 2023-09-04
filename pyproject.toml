@@ -4,10 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gpxtr"
+description = "Generate tables of interesting GPX route and waypoint information"
 authors = [
   { name="Paul Traina", email="pleasantone@users.noreply.github.com" },
 ]
-dynamic = ["version", "description"]
+
+dynamic = ["version"]
 readme = "README.rst"
 requires-python = ">=3.9"
 classifiers = [
@@ -17,7 +19,6 @@ classifiers = [
 ]
 dependencies = [
     "astral",
-    "dateutil",
     "geopandas",
     "gpxpy",
     "haversine",
@@ -33,4 +34,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/pleasantone/gpxtr/issues"
 
 [project.scripts]
-gpxtr = "gpxtr.gpxtr:main"
+gpxtr = "gpxtr:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "gpxtr.__version__"}
