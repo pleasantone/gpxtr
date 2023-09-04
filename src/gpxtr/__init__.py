@@ -326,11 +326,12 @@ class GPXTableCalculator:
         return False
 
 
-class DateParser(argparse.Action):
+class _DateParser(argparse.Action):
     """
     Argparse extension to support natural date parsing.
 
     Date string must be sent in complete so needs quoting on command line.
+    :meta private:
     """
     def __call__(self, parser, namespace, values, option_strings=None):
         setattr(namespace, self.dest, dateutil.parser.parse(values, default=datetime.now(dateutil.tz.tzlocal())))
@@ -341,7 +342,7 @@ def main() -> None:
     parser.add_argument("input", nargs="+", type=argparse.FileType('r'), help="input file(s)")
     parser.add_argument("--output", type=argparse.FileType('w'), default=None, help="output file")
     parser.add_argument("--sort", default="", type=str, help="sort algorithm (for waypoints only)")
-    parser.add_argument("--departure", default=None, action=DateParser, help="set departure time for first point (local timezone)")
+    parser.add_argument("--departure", default=None, action=_DateParser, help="set departure time for first point (local timezone)")
     parser.add_argument("--speed", default=0.0, type=float, help="set average travel speed")
     parser.add_argument("--html", action='store_true', help="output in HTML, not markdown")
     parser.add_argument("--metric", action='store_true', help="Use metric units (default imperial)")

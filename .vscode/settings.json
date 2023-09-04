@@ -1,9 +1,12 @@
 {
     "cSpell.words": [
         "argmin",
+        "autoclass",
+        "automodule",
         "autosummary",
         "dataframe",
         "dateutil",
+        "genindex",
         "geopandas",
         "gpxpy",
         "gpxtr",
@@ -12,13 +15,18 @@
         "iloc",
         "intersphinx",
         "itertuples",
+        "maxdepth",
+        "modindex",
         "Navaid",
         "Nicasio",
         "Northgate",
         "Peet's",
         "pleasantone",
         "pydatetime",
+        "quickstart",
         "scipy",
-        "tzlocal"
+        "toctree",
+        "tzlocal",
+        "venv"
     ]
 }
