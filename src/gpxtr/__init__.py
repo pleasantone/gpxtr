@@ -30,13 +30,15 @@ from shapely.geometry import Point
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
 
-DEFAULT_TRAVEL_SPEED = 30.0 / KM_TO_MILES # 50kph or ~30mph
+
+DEFAULT_TRAVEL_SPEED = 30.0 / KM_TO_MILES #: 50kph or ~30mph
 DEFAULT_WAYPOINT_DELAYS = {
     "Restaurant":   timedelta(minutes=60),
     "Gas Station":  timedelta(minutes=15),
     "Restroom":     timedelta(minutes=15),
     "Photo":        timedelta(minutes=5)
-}
+} #: Add a layover time automatically if a symbol matches
+
 
 OUT_HDR = '|        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes'
 OUT_SEP = '| :------------------: | :----------------------------- | ------: | - | ----: | :----'
@@ -50,6 +52,13 @@ XML_NAMESPACE = {
 class GPXTableCalculator:
     """
     Create a waypoint/route-point table based upon GPX information.
+
+    :param GPX gpx: gpxpy gpx data
+    :param bool imperial: display in Imperial units (default metric)
+    :param float speed: optional speed of travel for time-distance calculations
+    :param datetime departure: if provided, departure time for route or tracks to start
+    :param waypoint_delays: a non-default symbol-to-automatic waypoint delays dictionary (see DEFAULT_WAYPOINT_DELAYS)
+    :type waypoint_delays: dict or None
     """
     def __init__(self, gpx: GPX, imperial: bool=True, speed: float=0.0,
                  departure: Optional[datetime]=None, waypoint_delays: Optional[dict]=None) -> None:
@@ -64,7 +73,8 @@ class GPXTableCalculator:
         Print to stream generic information about the GPX data such as name, creator, and calculation
         variables.
 
-        :param out: Optional stream, otherwise standard output.
+        :param out: optional stream, otherwise standard output
+        :type out: None or TextIOWrapper
 
         :return: nothing
         """
@@ -89,11 +99,12 @@ class GPXTableCalculator:
         the order and distance of the waypoints. If a departure time has been set, estimate
         the arrival time at each waypoint and probable layover times.
 
-        :param sort: Optional comma separate string for waypoint order. May include
-                     'track_distance', 'total_distance', 'name', and 'symbol'.
+        :param sort: optional comma separate string for waypoint order.
+                     May include 'track_distance', 'total_distance', 'name', and 'symbol'.
                      Defaults to the order waypoints appear in the file.
-
-        :param out: Optional stream, otherwise standard output.
+        :type sort: None or str
+        :param out: optional stream, otherwise standard output
+        :type out: None or TextIOWrapper
 
         :return: nothing
         """
@@ -142,7 +153,8 @@ class GPXTableCalculator:
         times properly. If the route points have symbols encoded properly, will automatically compute layover
         estimates as well as gas stops.
 
-        :param out: Optional stream, otherwise standard output.
+        :param out: optional stream, otherwise standard output
+        :type out: None or TextIOWrapper
 
         :return: nothing
         """
@@ -315,7 +327,7 @@ class GPXTableCalculator:
 
     @staticmethod
     def shaping_point(point: Union[GPXWaypoint, GPXRoutePoint]) -> bool:
-        """ is a route point just a shaping/Via point? """
+        """ :return: True if route point is a shaping/Via point """
         if not point.name:
             return True
         if point.name.startswith('Via '):
