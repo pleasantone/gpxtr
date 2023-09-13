@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Main Program",
+            "name": "Python: GPXtr",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/gpxtr/gpxtr.py",
+            "program": "${workspaceFolder}/src/gpxtr/__init__.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--sort", "name", "testdata/ich-dual-gas.gpx"]
+            "args": ["--sort", "name", "/Users/pst/gpxtr/testdata/ich-dual-gas.gpx"]
         }
     ]
 }
