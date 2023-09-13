@@ -29,6 +29,7 @@ from shapely.geometry import Point
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
+LAST_WAYPOINT_DELTA = 200.0 # 100m allowed between last waypoint and end of track
 
 
 DEFAULT_TRAVEL_SPEED = 30.0 / KM_TO_MILES #: 50kph or ~30mph
@@ -109,12 +110,12 @@ class GPXTableCalculator:
         :return: nothing
         """
         def _wpe() -> str:
+            last_waypoint = abs(point.track_distance - point.track_length) < LAST_WAYPOINT_DELTA
             return OUT_FMT.format(
                 point.geometry.x, point.geometry.y,
                 (point.name or '').replace('\n', ' '),
                 f'{self.format_long_length(round(point.track_distance - last_gas))}/{self.format_long_length(round(point.track_distance))}' if
-                    self.is_gas(point) or
-                    abs(point.track_distance - point.track_length) < 1.0 else f'{self.format_long_length(round(point.track_distance))}',
+                    self.is_gas(point) or last_waypoint else f'{self.format_long_length(round(point.track_distance))}',
                 self.is_gas(point) or ' ',
                 departure.astimezone().strftime('%H:%M') if departure else '',
                 point.symbol or '',
