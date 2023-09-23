@@ -76,7 +76,7 @@ class GPXTableCalculator:
         imperial: bool = True,
         speed: float = 0.0,
         departure: Optional[datetime] = None,
-        waypoint_delays: Optional[dict] = None,
+        waypoint_delays: Optional[dict] = DEFAULT_WAYPOINT_DELAYS,
     ) -> None:
         self.gpx = gpx
         self.speed = (
@@ -84,7 +84,7 @@ class GPXTableCalculator:
         ) or DEFAULT_TRAVEL_SPEED
         self.imperial = imperial
         self.depart_at = departure
-        self.waypoint_delays = waypoint_delays or DEFAULT_WAYPOINT_DELAYS
+        self.waypoint_delays = waypoint_delays
 
     def print_header(self, out: Optional[io.TextIOWrapper] = None) -> None:
         """
@@ -100,6 +100,8 @@ class GPXTableCalculator:
             print(f"# {self.gpx.name}", file=out)
         if self.gpx.creator:
             print(f"- {self.gpx.creator}", file=out)
+        if self.depart_at:
+            print(f"- Departure at {self.depart_at:%c}")
         move_data = self.gpx.get_moving_data()
         if move_data and move_data.moving_time:
             print(
@@ -146,8 +148,8 @@ class GPXTableCalculator:
                 self.is_gas(point) or " ",
                 departure.astimezone().strftime("%H:%M") if departure else "",
                 point.symbol or "",
-                f" (+{str(self.symbol_delay(point))[:-3]})"
-                if not first_point and self.symbol_delay(point)
+                f" (+{str(self.point_delay(point))[:-3]})"
+                if not first_point and self.point_delay(point)
                 else "",
             )
 
@@ -186,7 +188,7 @@ class GPXTableCalculator:
                 print(_wpe(), file=out)
                 if self.is_gas(point):
                     last_gas = point.track_distance
-                delay = self.symbol_delay(point) if not first_point else None
+                delay = self.point_delay(point) if not first_point else None
                 if delay and start_time:
                     start_time += delay
                 first_point = False
@@ -228,14 +230,14 @@ class GPXTableCalculator:
             dist = 0.0
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
-            timing = self.departure_time(route.points[0]) or self.depart_at
+            timing = self.departure_time(route.points[0], True)
             last_display_distance = 0.0
             for point in route.points:
                 if not self.shaping_point(point):
                     if timing:
                         timing += self.travel_time(dist - last_display_distance)
                     last_display_distance = dist
-                    departure = self.departure_time(point)
+                    departure = self.departure_time(point, dist == 0.0)
                     if departure:
                         timing = departure
                     delay = self.layover(point)
@@ -366,8 +368,21 @@ class GPXTableCalculator:
             return f'{speed * KM_TO_MILES:.2f}{" mph" if units else ""}'
         return f'{speed:.2f}{" km/h" if units else ""}'
 
-    def symbol_delay(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> timedelta:
-        return self.waypoint_delays.get(point.symbol or "nil") or timedelta()
+    def point_delay(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> timedelta:
+        return (
+            (
+                self.waypoint_delays.get("Restaurant")
+                if self.is_meal(point)
+                else timedelta()
+            )
+            or (
+                self.waypoint_delays.get("Gas Station")
+                if self.is_gas(point)
+                else timedelta()
+            )
+            or self.waypoint_delays.get(point.symbol or "nil")
+            or timedelta()
+        )
 
     def travel_time(self, dist: float) -> timedelta:
         """distance is in meters, speed is in km/h"""
@@ -386,11 +401,14 @@ class GPXTableCalculator:
                     )
         return timedelta()
 
-    @staticmethod
     def departure_time(
-        point: Union[GPXWaypoint, GPXRoutePoint, GPXTrackPoint]
+        self,
+        point: Union[GPXWaypoint, GPXRoutePoint, GPXTrackPoint],
+        use_departure: Optional[bool] = False,
     ) -> Optional[datetime]:
         """returns datetime object for route point with departure times or None"""
+        if use_departure and self.depart_at:
+            return self.depart_at
         for extension in point.extensions:
             for departure in extension.findall("trp:DepartureTime", XML_NAMESPACE):
                 return datetime.fromisoformat(departure.text.replace("Z", "+00:00"))
@@ -403,9 +421,7 @@ class GPXTableCalculator:
         start = astral.LocationInfo(
             "Start Point", "", "", point.latitude, point.longitude
         )
-        sun = astral.sun.sun(
-            start.observer, date=(self.departure_time(point) or self.depart_at)
-        )
+        sun = astral.sun.sun(start.observer, date=self.departure_time(point, True))
         return (
             f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
             f'Sunset: {sun["sunset"].astimezone():%H:%M}'
@@ -419,6 +435,20 @@ class GPXTableCalculator:
             or re.search(r"\bGas\b", point.name or "", re.I)
         ):
             return "G"
+        return ""
+
+    @staticmethod
+    def is_meal(point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+        if (
+            point.symbol
+            and "Restaurant" in point.symbol
+            or re.search(
+                r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b",
+                point.name or "",
+                re.I,
+            )
+        ):
+            return "L"
         return ""
 
     @staticmethod
