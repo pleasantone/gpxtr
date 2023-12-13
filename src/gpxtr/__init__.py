@@ -45,6 +45,7 @@ DEFAULT_WAYPOINT_DELAYS = {
     "Gas Station": timedelta(minutes=15),
     "Restroom": timedelta(minutes=15),
     "Photo": timedelta(minutes=5),
+    "Scenic Area": timedelta(minutes=5),
 }  #: Add a layover time automatically if a symbol matches
 
 
@@ -76,7 +77,7 @@ class GPXTableCalculator:
         imperial: bool = True,
         speed: float = 0.0,
         departure: Optional[datetime] = None,
-        waypoint_delays: Optional[dict] = DEFAULT_WAYPOINT_DELAYS,
+        waypoint_delays: Optional[dict] = None,
     ) -> None:
         self.gpx = gpx
         self.speed = (
@@ -84,7 +85,7 @@ class GPXTableCalculator:
         ) or DEFAULT_TRAVEL_SPEED
         self.imperial = imperial
         self.depart_at = departure
-        self.waypoint_delays = waypoint_delays
+        self.waypoint_delays = waypoint_delays or DEFAULT_WAYPOINT_DELAYS
 
     def print_header(self, out: Optional[io.TextIOWrapper] = None) -> None:
         """
@@ -145,7 +146,7 @@ class GPXTableCalculator:
                 f"{self.format_long_length(round(point.track_distance - last_gas))}/{self.format_long_length(round(point.track_distance))}"
                 if self.is_gas(point) or last_waypoint
                 else f"{self.format_long_length(round(point.track_distance))}",
-                self.is_gas(point) or " ",
+                self.point_marker(point),
                 departure.astimezone().strftime("%H:%M") if departure else "",
                 point.symbol or "",
                 f" (+{str(self.point_delay(point))[:-3]})"
@@ -215,7 +216,7 @@ class GPXTableCalculator:
                 f"{self.format_long_length(dist - last_gas)}/{self.format_long_length(dist)}"
                 if self.is_gas(point) or point is route.points[-1]
                 else f"{self.format_long_length(dist)}",
-                self.is_gas(point) or " ",
+                self.point_marker(point),
                 timing.astimezone().strftime("%H:%M") if timing else "",
                 point.symbol or "",
                 f" (+{str(delay)[:-3]})" if delay else "",
@@ -380,8 +381,21 @@ class GPXTableCalculator:
                 if self.is_gas(point)
                 else timedelta()
             )
+            or (
+                self.waypoint_delays.get("Scenic Area")
+                if self.is_scenic_area(point)
+                else timedelta()
+            )
             or self.waypoint_delays.get(point.symbol or "nil")
             or timedelta()
+        )
+
+    def point_marker(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+        return (
+            self.is_meal(point)
+            or self.is_gas(point)
+            or self.is_scenic_area(point)
+            or " "
         )
 
     def travel_time(self, dist: float) -> timedelta:
@@ -432,7 +446,7 @@ class GPXTableCalculator:
         if (
             point.symbol
             and "Gas Station" in point.symbol
-            or re.search(r"\bGas\b", point.name or "", re.I)
+            or re.search(r"\bGas\b|\bFuel\b", point.name or "", re.I)
         ):
             return "G"
         return ""
@@ -449,6 +463,16 @@ class GPXTableCalculator:
             )
         ):
             return "L"
+        return ""
+
+    @staticmethod
+    def is_scenic_area(point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+        if (
+            point.symbol
+            and "Scenic Area" in point.symbol
+            or re.search(r"\bScenic Area\b|\bPhoto\b", point.name or "", re.I)
+        ):
+            return "P"
         return ""
 
     @staticmethod
