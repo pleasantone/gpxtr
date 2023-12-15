@@ -10,8 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtr/__init__.py",
             "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": ["--sort", "name", "/Users/pst/gpxtr/testdata/ich-dual-gas.gpx"]
+            "args": ["--depart", "12/26/2024 08:00am", "/Users/pst/gpxtr/testdata/twixtmas.gpx"]
         }
     ]
 }
