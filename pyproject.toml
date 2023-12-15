@@ -19,14 +19,8 @@ classifiers = [
 ]
 dependencies = [
     "astral",
-    "geopandas",
     "gpxpy",
-    "haversine",
-    "markdown2",
-    "numpy",
-    "pandas",
-    "scipy",
-    "shapely"
+    "markdown2"
 ]
 
 [project.urls]

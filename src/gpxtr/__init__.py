@@ -3,36 +3,24 @@
 GPXtr - Create a markdown template from a Garmin GPX file for route information
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 import argparse
 import io
 import math
 import re
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Optional, Union, List, NamedTuple
 
 import astral
 import astral.sun
 import dateutil.parser
 import dateutil.tz
-import geopandas as gpd
-import gpxpy
+import gpxpy.gpx
+import gpxpy.geo
+import gpxpy.utils
 import markdown2
-import numpy as np
-import pandas as pd
 
-from gpxpy.gpx import (
-    GPX,
-    GPXTrack,
-    GPXWaypoint,
-    GPXRoutePoint,
-    GPXTrackPoint,
-    GPXException,
-)
-from gpxpy.geo import distance
-from scipy.spatial import cKDTree
-from shapely.geometry import Point
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
@@ -59,6 +47,151 @@ XML_NAMESPACE = {
 }
 
 
+class NearestLocationDataExt(NamedTuple):
+    """
+    Extended class for gpxpy.gpx.NearestLocationData
+
+    Includes distance_from_start
+    """
+
+    location: "gpxpy.gpx.GPXTrackPoint"
+    track_no: int
+    segment_no: int
+    point_no: int
+    distance_from_start: float
+
+
+class GPXTrackExt(gpxpy.gpx.GPXTrack):
+    """
+    Extended class for gpxpy.gpx.GPXTrack
+
+    usage: ext_track = GPXTrackExt(track)
+    """
+
+    def __init__(self, track):  # pylint: disable=super-init-not-called
+        self.gpx_track = track
+
+    def get_points_data(self, distance_2d: bool = False) -> List[gpxpy.gpx.PointData]:
+        """
+        Returns a list of tuples containing the actual point, its distance from the start,
+        track_no, segment_no, and segment_point_no
+        """
+        distance_from_start = 0.0
+        previous_point = None
+
+        # (point, distance_from_start) pairs:
+        points = []
+
+        for segment_no, segment in enumerate(self.gpx_track.segments):
+            for point_no, point in enumerate(segment.points):
+                if previous_point and point_no > 0:
+                    if distance_2d:
+                        distance = point.distance_2d(previous_point)
+                    else:
+                        distance = point.distance_3d(previous_point)
+
+                    distance_from_start += distance or 0.0
+
+                points.append(
+                    gpxpy.gpx.PointData(
+                        point, distance_from_start, -1, segment_no, point_no
+                    )
+                )
+
+                previous_point = point
+
+        return points
+
+    def get_nearest_locations(
+        self, location: gpxpy.geo.Location, threshold_distance: float = 0.01
+    ) -> List[NearestLocationDataExt]:
+        """
+        Returns a list of locations of elements like
+        consisting of points where the location may be on the track
+
+        threshold_distance is the minimum distance from the track
+        so that the point *may* be counted as to be "on the track".
+        For example 0.01 means 1% of the track distance.
+        """
+
+        assert location
+        assert threshold_distance
+
+        result: List[NearestLocationDataExt] = []
+
+        points = self.get_points_data()
+
+        if not points:
+            return result
+
+        distance: Optional[float] = points[-1][1]
+
+        threshold = (distance or 0.0) * threshold_distance
+
+        min_distance_candidate = None
+        distance_from_start_candidate = None
+        track_no_candidate: Optional[int] = None
+        segment_no_candidate: Optional[int] = None
+        point_no_candidate: Optional[int] = None
+        point_candidate: Optional[gpxpy.gpx.GPXTrackPoint] = None
+        point = None
+
+        for point, distance_from_start, track_no, segment_no, point_no in points:
+            distance = location.distance_3d(point)
+            if (distance or math.inf) < threshold:
+                if (
+                    min_distance_candidate is None
+                    or (distance or math.inf) < min_distance_candidate
+                ):
+                    min_distance_candidate = distance
+                    distance_from_start_candidate = distance_from_start
+                    track_no_candidate = track_no
+                    segment_no_candidate = segment_no
+                    point_no_candidate = point_no
+                    point_candidate = point
+            else:
+                if (
+                    distance_from_start_candidate is not None
+                    and point_candidate is not None
+                    and track_no_candidate is not None
+                    and segment_no_candidate is not None
+                    and point_no_candidate is not None
+                ):
+                    result.append(
+                        NearestLocationDataExt(
+                            point_candidate,
+                            track_no_candidate,
+                            segment_no_candidate,
+                            point_no_candidate,
+                            distance_from_start_candidate,
+                        )
+                    )
+                min_distance_candidate = None
+                distance_from_start_candidate = None
+                track_no_candidate = None
+                segment_no_candidate = None
+                point_no_candidate = None
+
+        if (
+            distance_from_start_candidate is not None
+            and point_candidate is not None
+            and track_no_candidate is not None
+            and segment_no_candidate is not None
+            and point_no_candidate is not None
+        ):
+            result.append(
+                NearestLocationDataExt(
+                    point_candidate,
+                    track_no_candidate,
+                    segment_no_candidate,
+                    point_no_candidate,
+                    distance_from_start_candidate,
+                )
+            )
+
+        return result
+
+
 class GPXTableCalculator:
     """
     Create a waypoint/route-point table based upon GPX information.
@@ -73,7 +206,7 @@ class GPXTableCalculator:
 
     def __init__(
         self,
-        gpx: GPX,
+        gpx: gpxpy.gpx.GPX,
         imperial: bool = True,
         speed: float = 0.0,
         departure: Optional[datetime] = None,
@@ -115,9 +248,19 @@ class GPXTableCalculator:
         if self.speed:
             print(f"- Default speed: {self.format_speed(self.speed, True)}", file=out)
 
-    def print_waypoints(
-        self, sort: str = "", out: Optional[io.TextIOWrapper] = None
-    ) -> None:
+    def _populate_times(self) -> None:
+        for track_no, track in enumerate(self.gpx.tracks):
+            if self.depart_at and self.speed:
+                if not track.has_times():
+                    # assume (for now) that if there are multiple tracks, 1 track = 1 day
+                    depart_at = self.depart_at + timedelta(hours=24 * track_no)
+                    track.segments[0].points[0].time = depart_at
+                    track.segments[-1].points[-1].time = depart_at + timedelta(
+                        hours=track.length_2d() / (self.speed * 1000)
+                    )
+        self.gpx.add_missing_times()
+
+    def print_waypoints(self, out: Optional[io.TextIOWrapper] = None) -> None:
         """
         Print waypoint information
 
@@ -125,10 +268,6 @@ class GPXTableCalculator:
         the order and distance of the waypoints. If a departure time has been set, estimate
         the arrival time at each waypoint and probable layover times.
 
-        :param sort: optional comma separate string for waypoint order.
-                     May include 'track_distance', 'total_distance', 'name', and 'symbol'.
-                     Defaults to the order waypoints appear in the file.
-        :type sort: None or str
         :param out: optional stream, otherwise standard output
         :type out: None or TextIOWrapper
 
@@ -137,62 +276,63 @@ class GPXTableCalculator:
 
         def _wpe() -> str:
             last_waypoint = (
-                abs(point.track_distance - point.track_length) < LAST_WAYPOINT_DELTA
+                abs(track_point.distance_from_start - track_length)
+                < LAST_WAYPOINT_DELTA
             )
             return OUT_FMT.format(
-                point.geometry.x,
-                point.geometry.y,
-                (point.name or "").replace("\n", " "),
-                f"{self.format_long_length(round(point.track_distance - last_gas))}/{self.format_long_length(round(point.track_distance))}"
-                if self.is_gas(point) or last_waypoint
-                else f"{self.format_long_length(round(point.track_distance))}",
-                self.point_marker(point),
-                departure.astimezone().strftime("%H:%M") if departure else "",
-                point.symbol or "",
-                f" (+{str(self.point_delay(point))[:-3]})"
-                if not first_point and self.point_delay(point)
+                waypoint.latitude,
+                waypoint.longitude,
+                (waypoint.name or "").replace("\n", " "),
+                f"{self.format_long_length(round(track_point.distance_from_start - last_gas))}/{self.format_long_length(round(track_point.distance_from_start))}"
+                if self.is_gas(waypoint) or last_waypoint
+                else f"{self.format_long_length(round(track_point.distance_from_start))}",
+                self.point_marker(waypoint),
+                (track_point.location.time + waypoint_delays)
+                .astimezone()
+                .strftime("%H:%M")
+                if track_point.location.time
                 else "",
+                waypoint.symbol or "",
+                f" (+{str(layover)[:-3]})" if layover else "",
             )
 
+        self._populate_times()
         for track in self.gpx.tracks:
-            #       self.gpx.waypoints.append(_waypoint_from_point(track.segments[0].points[0],
-            #            f'START: {track.name}', 'START'))
-            self.gpx.waypoints.append(
-                self.waypoint_from_point(
-                    track.segments[-1].points[-1], f"END: {track.name}", "END"
-                )
+            waypoints = [
+                (wp, GPXTrackExt(track).get_nearest_locations(wp))
+                for wp in self.gpx.waypoints
+            ]
+            waypoints = sorted(
+                [(wp, tp) for wp, tps in waypoints for tp in tps],
+                key=lambda entry: entry[1].point_no,
             )
-        if self.gpx.waypoints and self.gpx.tracks:
+            track_length = track.length_2d()
+
+            print(f"\n## Track: {track.name}", file=out)
+            if track.description:
+                print(f"- {track.description}", file=out)
+            print(f"\n{OUT_HDR}\n{OUT_SEP}", file=out)
+            waypoint_delays = timedelta()
+            last_gas = 0.0
+
+            for waypoint, track_point in waypoints:
+                first_waypoint = waypoint == waypoints[0][0]
+                last_waypoint = waypoint == waypoints[-1][0]
+                if last_gas > track_point.distance_from_start:
+                    last_gas = 0.0  # assume we have filled up between track segments
+                layover = (
+                    timedelta()
+                    if first_waypoint or last_waypoint
+                    else self.point_delay(waypoint)
+                )
+                print(_wpe(), file=out)
+                if self.is_gas(waypoint):
+                    last_gas = track_point.distance_from_start
+                waypoint_delays += layover
             print(
-                f"- {self.sun_rise_set(self.gpx.tracks[0].segments[0].points[0])}",
+                f"\n- {self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)}",
                 file=out,
             )
-            print("## Waypoints", file=out)
-            print(f"\n{OUT_HDR}\n{OUT_SEP}", file=out)
-            last_gas = 0.0
-            start_time = self.depart_at
-            first_point = True
-            for point in self.geodata_nearest(
-                self.geodata_points(self.gpx.waypoints),
-                self.geodata_tracks(self.gpx.tracks),
-                sort=sort,
-            ).itertuples():
-                departure = (
-                    start_time + self.travel_time(point.track_distance)
-                    if start_time
-                    else None
-                )
-                if (
-                    last_gas > point.track_distance
-                ):  # assume we have filled up between segments
-                    last_gas = 0.0
-                print(_wpe(), file=out)
-                if self.is_gas(point):
-                    last_gas = point.track_distance
-                delay = self.point_delay(point) if not first_point else None
-                if delay and start_time:
-                    start_time += delay
-                first_point = False
 
     def print_routes(self, out: Optional[io.TextIOWrapper] = None) -> None:
         """
@@ -226,7 +366,7 @@ class GPXTableCalculator:
             print(f"\n## Route: {route.name}", file=out)
             if route.description:
                 print(f"- {route.description}", file=out)
-            print(f"- {self.sun_rise_set(route.points[0])}", file=out)
+
             print(f"\n{OUT_HDR}\n{OUT_SEP}", file=out)
             dist = 0.0
             previous = route.points[0].latitude, route.points[0].longitude
@@ -250,7 +390,7 @@ class GPXTableCalculator:
                 if self.is_gas(point):
                     last_gas = dist
                 current = point.latitude, point.longitude
-                dist += distance(
+                dist += gpxpy.geo.distance(
                     previous[0], previous[1], None, current[0], current[1], None
                 )
                 for extension in point.extensions:
@@ -258,88 +398,15 @@ class GPXTableCalculator:
                         current = float(extension_point.get("lat")), float(
                             extension_point.get("lon")
                         )
-                        dist += distance(
+                        dist += gpxpy.geo.distance(
                             previous[0], previous[1], None, current[0], current[1], None
                         )
                         previous = current
                 previous = current
-
-    @staticmethod
-    def waypoint_from_point(
-        point, name: str, symbol: Optional[str] = None
-    ) -> GPXWaypoint:
-        return GPXWaypoint(point.latitude, point.longitude, name=name, symbol=symbol)
-
-    @staticmethod
-    def geodata_tracks(tracks: list[GPXTrack]) -> gpd.GeoDataFrame:
-        tracks_points = []
-        total_distance = 0.0
-        for track in tracks:
-            track_distance = 0.0
-            last = track.segments[0].points[0]
-            track_length = track.length_2d()
-            for segment in track.segments:
-                for point in segment.points:
-                    delta = distance(
-                        last.latitude,
-                        last.longitude,
-                        None,
-                        point.latitude,
-                        point.longitude,
-                        None,
-                    )
-                    track_distance += delta
-                    total_distance += delta
-                    last = point
-                    tracks_points.append(
-                        [
-                            Point(point.latitude, point.longitude),
-                            track_distance,
-                            total_distance,
-                            track_length,
-                        ]
-                    )
-        return gpd.GeoDataFrame(
-            tracks_points,
-            columns=["geometry", "track_distance", "total_distance", "track_length"],
-            crs="EPSG:4326",
-        )  # type: ignore
-
-    @staticmethod
-    def geodata_points(
-        points: Union[list[GPXWaypoint], list[GPXRoutePoint]]
-    ) -> gpd.GeoDataFrame:
-        waypoints = []
-        for point in points:
-            waypoints.append(
-                [Point(point.latitude, point.longitude), point.name, point.symbol]
+            print(
+                f"\n- {self.sun_rise_set(route.points[0], route.points[-1])}",
+                file=out,
             )
-        return gpd.GeoDataFrame(
-            waypoints, columns=["geometry", "name", "symbol"], crs="EPSG:4326"
-        )  # type: ignore
-
-    @staticmethod
-    def geodata_nearest(
-        points: gpd.GeoDataFrame, tracks: gpd.GeoDataFrame, sort: str = ""
-    ) -> pd.DataFrame:
-        np_points = np.array(list(points.geometry.apply(lambda x: (x.x, x.y))))
-        np_tracks = np.array(list(tracks.geometry.apply(lambda x: (x.x, x.y))))
-        btree = cKDTree(np_tracks)
-        dist, idx = btree.query(np_points, k=1)
-        tracks_nearest = (
-            tracks.iloc[idx].drop(columns="geometry").reset_index(drop=True)
-        )
-        dataframe = pd.concat(
-            [
-                points.reset_index(drop=True),
-                tracks_nearest,
-                pd.Series(dist, name="nearest"),
-            ],
-            axis=1,
-        )
-        if sort:
-            dataframe = dataframe.sort_values(by=sort)
-        return dataframe
 
     @staticmethod
     def format_time(time_s: float, seconds: bool) -> str:
@@ -369,7 +436,9 @@ class GPXTableCalculator:
             return f'{speed * KM_TO_MILES:.2f}{" mph" if units else ""}'
         return f'{speed:.2f}{" km/h" if units else ""}'
 
-    def point_delay(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> timedelta:
+    def point_delay(
+        self, point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]
+    ) -> timedelta:
         return (
             (
                 self.waypoint_delays.get("Restaurant")
@@ -390,7 +459,9 @@ class GPXTableCalculator:
             or timedelta()
         )
 
-    def point_marker(self, point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+    def point_marker(
+        self, point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]
+    ) -> str:
         return (
             self.is_meal(point)
             or self.is_gas(point)
@@ -403,7 +474,7 @@ class GPXTableCalculator:
         return timedelta(minutes=dist / 1000.0 / self.speed * 60.0)
 
     @staticmethod
-    def layover(point: GPXRoutePoint) -> timedelta:
+    def layover(point: gpxpy.gpx.GPXRoutePoint) -> timedelta:
         """layover time at a given RoutePoint (Basecamp extension)"""
         for extension in point.extensions:
             for duration in extension.findall("trp:StopDuration", XML_NAMESPACE):
@@ -417,7 +488,9 @@ class GPXTableCalculator:
 
     def departure_time(
         self,
-        point: Union[GPXWaypoint, GPXRoutePoint, GPXTrackPoint],
+        point: Union[
+            gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint, gpxpy.gpx.GPXTrackPoint
+        ],
         use_departure: Optional[bool] = False,
     ) -> Optional[datetime]:
         """returns datetime object for route point with departure times or None"""
@@ -429,20 +502,43 @@ class GPXTableCalculator:
         return None
 
     def sun_rise_set(
-        self, point: Union[GPXWaypoint, GPXRoutePoint, GPXTrackPoint]
+        self,
+        start: Union[gpxpy.gpx.GPXRoutePoint, gpxpy.gpx.GPXTrackPoint],
+        end: Union[gpxpy.gpx.GPXRoutePoint, gpxpy.gpx.GPXTrackPoint],
+        delay: Optional[timedelta] = None,
     ) -> str:
-        """return sunrise/sunset info based upon the route start point"""
-        start = astral.LocationInfo(
-            "Start Point", "", "", point.latitude, point.longitude
+        """return sunrise/sunset and start & end info based upon the route start and end point"""
+        if not start.time or not end.time:
+            return ""
+        sun_start = astral.sun.sun(
+            astral.LocationInfo(
+                "Start Point", "", "", start.latitude, start.longitude
+            ).observer,
+            date=start.time,
         )
-        sun = astral.sun.sun(start.observer, date=self.departure_time(point, True))
-        return (
-            f'Sunrise: {sun["sunrise"].astimezone():%H:%M}, '
-            f'Sunset: {sun["sunset"].astimezone():%H:%M}'
+        sun_end = astral.sun.sun(
+            astral.LocationInfo(
+                "End Point", "", "", end.latitude, end.longitude
+            ).observer,
+            date=start.time,
         )
+        times = {
+            "Sunrise": sun_start["sunrise"],
+            "Sunset": sun_end["sunset"],
+            "Starts": start.time,
+            "Ends": end.time + (delay or timedelta()),
+        }
+        first = True
+        retval = f"{start.time.astimezone():%x}: "
+        for name, time in sorted(times.items(), key=lambda kv: kv[1]):
+            if first is not True:
+                retval += ", "
+            first = False
+            retval += f"{name}: {time.astimezone():%H:%M}"
+        return retval
 
     @staticmethod
-    def is_gas(point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+    def is_gas(point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]) -> str:
         if (
             point.symbol
             and "Gas Station" in point.symbol
@@ -452,7 +548,7 @@ class GPXTableCalculator:
         return ""
 
     @staticmethod
-    def is_meal(point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+    def is_meal(point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]) -> str:
         if (
             point.symbol
             and "Restaurant" in point.symbol
@@ -466,7 +562,9 @@ class GPXTableCalculator:
         return ""
 
     @staticmethod
-    def is_scenic_area(point: Union[GPXWaypoint, GPXRoutePoint]) -> str:
+    def is_scenic_area(
+        point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]
+    ) -> str:
         if (
             point.symbol
             and "Scenic Area" in point.symbol
@@ -476,7 +574,9 @@ class GPXTableCalculator:
         return ""
 
     @staticmethod
-    def shaping_point(point: Union[GPXWaypoint, GPXRoutePoint]) -> bool:
+    def shaping_point(
+        point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]
+    ) -> bool:
         """:return: True if route point is a shaping/Via point"""
         if not point.name:
             return True
@@ -513,9 +613,6 @@ def main() -> None:
         "--output", type=argparse.FileType("w"), default=None, help="output file"
     )
     parser.add_argument(
-        "--sort", default="", type=str, help="sort algorithm (for waypoints only)"
-    )
-    parser.add_argument(
         "--departure",
         default=None,
         action=_DateParser,
@@ -542,9 +639,6 @@ def main() -> None:
         final_out = out
         out = io.StringIO()
 
-    if args.sort:
-        args.sort = args.sort.split(",")
-
     for handle in args.input:
         with handle as stream:
             try:
@@ -555,9 +649,9 @@ def main() -> None:
                     imperial=not args.metric,
                 )
                 table.print_header(out=out)
-                table.print_waypoints(sort=args.sort, out=out)
+                table.print_waypoints(out=out)
                 table.print_routes(out=out)
-            except GPXException as err:
+            except gpxpy.gpx.GPXException as err:
                 raise SystemExit(f"{handle.name}: {err}") from err
 
     if args.html:

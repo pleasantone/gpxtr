@@ -10,7 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtr/__init__.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "12/26/2024 08:00am", "/Users/pst/gpxtr/testdata/twixtmas.gpx"]
+            "args": ["--depart", "12/26/2024 08:00am", "/Users/pst/gpxtr/testdata/twixtmas.gpx"],
+            "xargs": ["--depart", "07/27/2023 09:15am", "/Users/pst/gpxtr/testdata/basecamp.gpx"]
         }
     ]
 }
