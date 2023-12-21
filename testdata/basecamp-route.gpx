@@ -1935,7 +1935,7 @@ Guerneville, California, 95446, United States
     </rtept>
     <rtept lat="38.501780033111572" lon="-123.000075817108154">
       <time>2023-07-27T19:49:28Z</time>
-      <name>76 Gurneville</name>
+      <name>76 Gureneville</name>
       <cmt>76
 16383 Main St
 Guerneville, California, 95446, United States
@@ -2396,7 +2396,7 @@ Cazadero, California, 95421, United States
 6152 Cazadero Hwy
 Cazadero, California, 95421, United States
 707-632-5258</desc>
-      <sym>Truck</sym>
+      <sym>Scenic Area</sym>
       <extensions>
         <trp:ViaPoint>
           <trp:StopDuration>PT5M</trp:StopDuration>

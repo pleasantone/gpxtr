@@ -50,7 +50,7 @@ Bodega Bay, California, 94923, United States
   </wpt>
   <wpt lat="38.501780033111572" lon="-123.000075817108154">
     <time>2023-07-27T19:49:28Z</time>
-    <name>76 Gurneville</name>
+    <name>76 Guerneville</name>
     <cmt>76
 16383 Main St
 Guerneville, California, 95446, United States
@@ -238,7 +238,7 @@ Cazadero, California, 95421, United States
 6152 Cazadero Hwy
 Cazadero, California, 95421, United States
 707-632-5258</desc>
-    <sym>Truck</sym>
+    <sym>Scenic Area</sym>
     <type>user</type>
     <extensions>
       <gpxx:WaypointExtension>
