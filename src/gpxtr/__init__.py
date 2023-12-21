@@ -138,10 +138,10 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
 
         for point, distance_from_start, track_no, segment_no, point_no in points:
             distance = location.distance_3d(point)
-            if (distance or math.inf) < threshold:
+            if (distance or 0.0) < threshold:
                 if (
                     min_distance_candidate is None
-                    or (distance or math.inf) < min_distance_candidate
+                    or (distance or 0.0) < min_distance_candidate
                 ):
                     min_distance_candidate = distance
                     distance_from_start_candidate = distance_from_start
@@ -163,7 +163,7 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
                             track_no_candidate,
                             segment_no_candidate,
                             point_no_candidate,
-                            distance_from_start_candidate,
+                            distance_from_start_candidate
                         )
                     )
                 min_distance_candidate = None
@@ -185,10 +185,9 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
                     track_no_candidate,
                     segment_no_candidate,
                     point_no_candidate,
-                    distance_from_start_candidate,
+                    distance_from_start_candidate
                 )
             )
-
         return result
 
 
@@ -299,7 +298,7 @@ class GPXTableCalculator:
         self._populate_times()
         for track in self.gpx.tracks:
             waypoints = [
-                (wp, GPXTrackExt(track).get_nearest_locations(wp))
+                (wp, GPXTrackExt(track).get_nearest_locations(wp, 0.001))
                 for wp in self.gpx.waypoints
             ]
             waypoints = sorted(
@@ -372,6 +371,8 @@ class GPXTableCalculator:
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
             timing = self.departure_time(route.points[0], True)
+            if timing:
+                route.points[0].time = timing
             last_display_distance = 0.0
             for point in route.points:
                 if not self.shaping_point(point):
@@ -403,6 +404,8 @@ class GPXTableCalculator:
                         )
                         previous = current
                 previous = current
+            if timing:
+                route.points[-1].time = timing
             print(
                 f"\n- {self.sun_rise_set(route.points[0], route.points[-1])}",
                 file=out,
