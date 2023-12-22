@@ -24,9 +24,13 @@ import markdown2
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
-LAST_WAYPOINT_DELTA = 200.0  # 200m allowed between last waypoint and end of track
 
-
+DEFAULT_LAST_WAYPOINT_DELTA = (
+    200.0  # 200m allowed between last waypoint and end of track
+)
+DEFAULT_WAYPOINT_DEBOUNCE = (
+    2000.0  # 2km between duplicates of the same waypoint on a track
+)
 DEFAULT_TRAVEL_SPEED = 30.0 / KM_TO_MILES  #: 50kph or ~30mph
 DEFAULT_WAYPOINT_DELAYS = {
     "Restaurant": timedelta(minutes=60),
@@ -36,10 +40,12 @@ DEFAULT_WAYPOINT_DELAYS = {
     "Scenic Area": timedelta(minutes=5),
 }  #: Add a layover time automatically if a symbol matches
 
-
-OUT_HDR = "|        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes"
-OUT_SEP = "| :------------------: | :----------------------------- | ------: | - | ----: | :----"
-OUT_FMT = "| {:-10.4f},{:.4f} | {:30.30} | {:>7} | {:1} | {:>5} | {}{}"
+LLP_HDR = "|        Lat,Lon       "
+LLP_SEP = "| :------------------: "
+LLP_FMT = "| {:-10.4f},{:.4f} "
+OUT_HDR = "| Name                           |   Dist. | G |  ETA  | Notes"
+OUT_SEP = "| :----------------------------- | ------: | - | ----: | :----"
+OUT_FMT = "| {:30.30} | {:>7} | {:1} | {:>5} | {}{}"
 
 XML_NAMESPACE = {
     "trp": "http://www.garmin.com/xmlschemas/TripExtensions/v1",
@@ -103,7 +109,10 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
         return points
 
     def get_nearest_locations(
-        self, location: gpxpy.geo.Location, threshold_distance: float = 0.01
+        self,
+        location: gpxpy.geo.Location,
+        threshold_distance: float = 0.01,
+        deduplicate_distance: float = 0.0,
     ) -> List[NearestLocationDataExt]:
         """
         Returns a list of locations of elements like
@@ -112,7 +121,26 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
         threshold_distance is the minimum distance from the track
         so that the point *may* be counted as to be "on the track".
         For example 0.01 means 1% of the track distance.
+
+        deduplicate_distance is an actual distance in meters, not a
+        ratio based upon threshold. 2000 means it will not return
+        duplicates within 2km in case the track wraps around itself.
         """
+
+        def _deduplicate(
+            locations: List[NearestLocationDataExt], delta: float = 0.0
+        ) -> List[NearestLocationDataExt]:
+            previous: Optional[NearestLocationDataExt] = None
+            filtered: List[NearestLocationDataExt] = []
+            for point in locations:
+                if (
+                    not previous
+                    or (point.distance_from_start - previous.distance_from_start)
+                    > delta
+                ):
+                    filtered.append(point)
+                previous = point
+            return filtered
 
         assert location
         assert threshold_distance
@@ -128,21 +156,17 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
 
         threshold = (distance or 0.0) * threshold_distance
 
-        min_distance_candidate = None
-        distance_from_start_candidate = None
+        min_distance_candidate: Optional[float] = None
+        distance_from_start_candidate: Optional[float] = None
         track_no_candidate: Optional[int] = None
         segment_no_candidate: Optional[int] = None
         point_no_candidate: Optional[int] = None
         point_candidate: Optional[gpxpy.gpx.GPXTrackPoint] = None
-        point = None
 
         for point, distance_from_start, track_no, segment_no, point_no in points:
-            distance = location.distance_3d(point)
-            if (distance or 0.0) < threshold:
-                if (
-                    min_distance_candidate is None
-                    or (distance or 0.0) < min_distance_candidate
-                ):
+            distance = location.distance_3d(point) or math.inf
+            if distance < threshold:
+                if min_distance_candidate is None or distance < min_distance_candidate:
                     min_distance_candidate = distance
                     distance_from_start_candidate = distance_from_start
                     track_no_candidate = track_no
@@ -163,7 +187,7 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
                             track_no_candidate,
                             segment_no_candidate,
                             point_no_candidate,
-                            distance_from_start_candidate
+                            distance_from_start_candidate,
                         )
                     )
                 min_distance_candidate = None
@@ -171,6 +195,7 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
                 track_no_candidate = None
                 segment_no_candidate = None
                 point_no_candidate = None
+                point_candidate = None
 
         if (
             distance_from_start_candidate is not None
@@ -185,10 +210,10 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
                     track_no_candidate,
                     segment_no_candidate,
                     point_no_candidate,
-                    distance_from_start_candidate
+                    distance_from_start_candidate,
                 )
             )
-        return result
+        return _deduplicate(result, deduplicate_distance)
 
 
 class GPXTableCalculator:
@@ -208,16 +233,18 @@ class GPXTableCalculator:
         gpx: gpxpy.gpx.GPX,
         imperial: bool = True,
         speed: float = 0.0,
-        departure: Optional[datetime] = None,
-        waypoint_delays: Optional[dict] = None,
+        depart_at: Optional[datetime] = None,
     ) -> None:
         self.gpx = gpx
         self.speed = (
             speed / KM_TO_MILES if imperial else speed
         ) or DEFAULT_TRAVEL_SPEED
         self.imperial = imperial
-        self.depart_at = departure
-        self.waypoint_delays = waypoint_delays or DEFAULT_WAYPOINT_DELAYS
+        self.depart_at = depart_at
+        self.display_coordinates = False
+        self.waypoint_delays = DEFAULT_WAYPOINT_DELAYS
+        self.waypoint_debounce = DEFAULT_WAYPOINT_DEBOUNCE
+        self.last_waypoint_delta = DEFAULT_LAST_WAYPOINT_DELTA
 
     def print_header(self, out: Optional[io.TextIOWrapper] = None) -> None:
         """
@@ -274,16 +301,17 @@ class GPXTableCalculator:
         """
 
         def _wpe() -> str:
-            last_waypoint = (
+            final_waypoint = (
                 abs(track_point.distance_from_start - track_length)
-                < LAST_WAYPOINT_DELTA
+                < self.last_waypoint_delta
             )
-            return OUT_FMT.format(
-                waypoint.latitude,
-                waypoint.longitude,
+            result = ""
+            if self.display_coordinates:
+                result += LLP_FMT.format(waypoint.latitude, waypoint.longitude)
+            return result + OUT_FMT.format(
                 (waypoint.name or "").replace("\n", " "),
                 f"{self.format_long_length(round(track_point.distance_from_start - last_gas))}/{self.format_long_length(round(track_point.distance_from_start))}"
-                if self.is_gas(waypoint) or last_waypoint
+                if self.is_gas(waypoint) or final_waypoint
                 else f"{self.format_long_length(round(track_point.distance_from_start))}",
                 self.point_marker(waypoint),
                 (track_point.location.time + waypoint_delays)
@@ -298,7 +326,12 @@ class GPXTableCalculator:
         self._populate_times()
         for track in self.gpx.tracks:
             waypoints = [
-                (wp, GPXTrackExt(track).get_nearest_locations(wp, 0.001))
+                (
+                    wp,
+                    GPXTrackExt(track).get_nearest_locations(
+                        wp, 0.001, deduplicate_distance=self.waypoint_debounce
+                    ),
+                )
                 for wp in self.gpx.waypoints
             ]
             waypoints = sorted(
@@ -310,7 +343,7 @@ class GPXTableCalculator:
             print(f"\n## Track: {track.name}", file=out)
             if track.description:
                 print(f"- {track.description}", file=out)
-            print(f"\n{OUT_HDR}\n{OUT_SEP}", file=out)
+            print(self._format_output_header(), file=out)
             waypoint_delays = timedelta()
             last_gas = 0.0
 
@@ -348,9 +381,10 @@ class GPXTableCalculator:
         """
 
         def _rpe() -> str:
-            return OUT_FMT.format(
-                point.latitude,
-                point.longitude,
+            result = ""
+            if self.display_coordinates:
+                result += LLP_FMT.format(point.latitude, point.longitude)
+            return result + OUT_FMT.format(
                 (point.name or "").replace("\n", " "),
                 f"{self.format_long_length(dist - last_gas)}/{self.format_long_length(dist)}"
                 if self.is_gas(point) or point is route.points[-1]
@@ -366,7 +400,7 @@ class GPXTableCalculator:
             if route.description:
                 print(f"- {route.description}", file=out)
 
-            print(f"\n{OUT_HDR}\n{OUT_SEP}", file=out)
+            print(self._format_output_header(), file=out)
             dist = 0.0
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
@@ -410,6 +444,11 @@ class GPXTableCalculator:
                 f"\n- {self.sun_rise_set(route.points[0], route.points[-1])}",
                 file=out,
             )
+
+    def _format_output_header(self) -> str:
+        if self.display_coordinates:
+            return f"\n{LLP_HDR}{OUT_HDR}\n{LLP_SEP}{OUT_SEP}"
+        return f"\n{OUT_HDR}\n{OUT_SEP}"
 
     @staticmethod
     def format_time(time_s: float, seconds: bool) -> str:
@@ -630,6 +669,11 @@ def main() -> None:
     parser.add_argument(
         "--metric", action="store_true", help="Use metric units (default imperial)"
     )
+    parser.add_argument(
+        "--coordinates",
+        action="store_true",
+        help="Display latitude and longitude of waypoints",
+    )
 
     try:
         args = parser.parse_args()
@@ -647,10 +691,11 @@ def main() -> None:
             try:
                 table = GPXTableCalculator(
                     gpxpy.parse(stream),
-                    speed=args.speed,
-                    departure=args.departure,
                     imperial=not args.metric,
+                    speed=args.speed,
+                    depart_at=args.departure,
                 )
+                table.display_coordinates = args.coordinates
                 table.print_header(out=out)
                 table.print_waypoints(out=out)
                 table.print_routes(out=out)
