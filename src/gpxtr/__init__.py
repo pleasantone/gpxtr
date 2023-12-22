@@ -3,12 +3,13 @@
 GPXtr - Create a markdown template from a Garmin GPX file for route information
 """
 
-__version__ = "0.3.0"
+__version__ = "0.5.0"
 
 import argparse
 import io
 import math
 import re
+import sys
 from datetime import datetime, timedelta
 from typing import Optional, Union, List, NamedTuple
 
@@ -246,7 +247,7 @@ class GPXTableCalculator:
         self.waypoint_debounce = DEFAULT_WAYPOINT_DEBOUNCE
         self.last_waypoint_delta = DEFAULT_LAST_WAYPOINT_DELTA
 
-    def print_header(self, out: Optional[io.TextIOWrapper] = None) -> None:
+    def print_header(self) -> None:
         """
         Print to stream generic information about the GPX data such as name, creator, and calculation
         variables.
@@ -257,22 +258,21 @@ class GPXTableCalculator:
         :return: nothing
         """
         if self.gpx.name:
-            print(f"# {self.gpx.name}", file=out)
+            print(f"# {self.gpx.name}")
         if self.gpx.creator:
-            print(f"- {self.gpx.creator}", file=out)
+            print(f"- {self.gpx.creator}")
         if self.depart_at:
             print(f"- Departure at {self.depart_at:%c}")
         move_data = self.gpx.get_moving_data()
         if move_data and move_data.moving_time:
             print(
                 f"- Total moving time: {self.format_time(move_data.moving_time, False)}",
-                file=out,
             )
         dist = self.gpx.length_2d()
         if dist:
-            print(f"- Total distance: {self.format_long_length(dist, True)}", file=out)
+            print(f"- Total distance: {self.format_long_length(dist, True)}")
         if self.speed:
-            print(f"- Default speed: {self.format_speed(self.speed, True)}", file=out)
+            print(f"- Default speed: {self.format_speed(self.speed, True)}")
 
     def _populate_times(self) -> None:
         for track_no, track in enumerate(self.gpx.tracks):
@@ -286,7 +286,7 @@ class GPXTableCalculator:
                     )
         self.gpx.add_missing_times()
 
-    def print_waypoints(self, out: Optional[io.TextIOWrapper] = None) -> None:
+    def print_waypoints(self) -> None:
         """
         Print waypoint information
 
@@ -340,10 +340,10 @@ class GPXTableCalculator:
             )
             track_length = track.length_2d()
 
-            print(f"\n## Track: {track.name}", file=out)
+            print(f"\n## Track: {track.name}")
             if track.description:
-                print(f"- {track.description}", file=out)
-            print(self._format_output_header(), file=out)
+                print(f"- {track.description}")
+            print(self._format_output_header())
             waypoint_delays = timedelta()
             last_gas = 0.0
 
@@ -357,16 +357,15 @@ class GPXTableCalculator:
                     if first_waypoint or last_waypoint
                     else self.point_delay(waypoint)
                 )
-                print(_wpe(), file=out)
+                print(_wpe())
                 if self.is_gas(waypoint):
                     last_gas = track_point.distance_from_start
                 waypoint_delays += layover
             print(
                 f"\n- {self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)}",
-                file=out,
             )
 
-    def print_routes(self, out: Optional[io.TextIOWrapper] = None) -> None:
+    def print_routes(self) -> None:
         """
         Print route points present in GPX routes.
 
@@ -396,11 +395,11 @@ class GPXTableCalculator:
             )
 
         for route in self.gpx.routes:
-            print(f"\n## Route: {route.name}", file=out)
+            print(f"\n## Route: {route.name}")
             if route.description:
-                print(f"- {route.description}", file=out)
+                print(f"- {route.description}")
 
-            print(self._format_output_header(), file=out)
+            print(self._format_output_header())
             dist = 0.0
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
@@ -419,7 +418,7 @@ class GPXTableCalculator:
                     delay = self.layover(point)
                     if last_gas > dist:
                         last_gas = 0.0
-                    print(_rpe(), file=out)
+                    print(_rpe())
                     if timing:
                         timing += delay
                 if self.is_gas(point):
@@ -442,7 +441,6 @@ class GPXTableCalculator:
                 route.points[-1].time = timing
             print(
                 f"\n- {self.sun_rise_set(route.points[0], route.points[-1])}",
-                file=out,
             )
 
     def _format_output_header(self) -> str:
@@ -646,13 +644,28 @@ class _DateParser(argparse.Action):
         )
 
 
+def create_markdown(args) -> None:
+    for handle in args.input:
+        with handle as stream:
+            try:
+                table = GPXTableCalculator(
+                    gpxpy.parse(stream),
+                    imperial=not args.metric,
+                    speed=args.speed,
+                    depart_at=args.departure,
+                )
+                table.display_coordinates = args.coordinates
+                table.print_header()
+                table.print_waypoints()
+                table.print_routes()
+            except gpxpy.gpx.GPXException as err:
+                raise SystemExit(f"{handle.name}: {err}") from err
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "input", nargs="+", type=argparse.FileType("r"), help="input file(s)"
-    )
-    parser.add_argument(
-        "--output", type=argparse.FileType("w"), default=None, help="output file"
     )
     parser.add_argument(
         "--departure",
@@ -680,34 +693,16 @@ def main() -> None:
     except ValueError as err:
         raise SystemExit(err) from err
 
-    out = args.output
-    final_out = None
     if args.html:
-        final_out = out
-        out = io.StringIO()
-
-    for handle in args.input:
-        with handle as stream:
-            try:
-                table = GPXTableCalculator(
-                    gpxpy.parse(stream),
-                    imperial=not args.metric,
-                    speed=args.speed,
-                    depart_at=args.departure,
-                )
-                table.display_coordinates = args.coordinates
-                table.print_header(out=out)
-                table.print_waypoints(out=out)
-                table.print_routes(out=out)
-            except gpxpy.gpx.GPXException as err:
-                raise SystemExit(f"{handle.name}: {err}") from err
-
-    if args.html:
-        print(markdown2.markdown(out.getvalue(), extras=["tables"]), file=final_out)
-        if final_out:
-            final_out.close()
-    if out:
-        out.close()
+        with io.StringIO() as buffer:
+            real_stdout = sys.stdout
+            sys.stdout = buffer
+            create_markdown(args)
+            sys.stdout = real_stdout
+            buffer.flush()
+            print(markdown2.markdown(buffer.getvalue(), extras=["tables"]))
+    else:
+        create_markdown(args)
 
 
 if __name__ == "__main__":
