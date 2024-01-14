@@ -258,21 +258,21 @@ class GPXTableCalculator:
         :return: nothing
         """
         if self.gpx.name:
-            print(f"# {self.gpx.name}")
+            print(f"## {self.gpx.name}")
         if self.gpx.creator:
-            print(f"- {self.gpx.creator}")
+            print(f"* {self.gpx.creator}")
         if self.depart_at:
-            print(f"- Departure at {self.depart_at:%c}")
+            print(f"* Departure at {self.depart_at:%c}")
         move_data = self.gpx.get_moving_data()
         if move_data and move_data.moving_time:
             print(
-                f"- Total moving time: {self.format_time(move_data.moving_time, False)}",
+                f"* Total moving time: {self.format_time(move_data.moving_time, False)}",
             )
         dist = self.gpx.length_2d()
         if dist:
-            print(f"- Total distance: {self.format_long_length(dist, True)}")
+            print(f"* Total distance: {self.format_long_length(dist, True)}")
         if self.speed:
-            print(f"- Default speed: {self.format_speed(self.speed, True)}")
+            print(f"* Default speed: {self.format_speed(self.speed, True)}")
 
     def _populate_times(self) -> None:
         for track_no, track in enumerate(self.gpx.tracks):
@@ -342,7 +342,7 @@ class GPXTableCalculator:
 
             print(f"\n## Track: {track.name}")
             if track.description:
-                print(f"- {track.description}")
+                print(f"* {track.description}")
             print(self._format_output_header())
             waypoint_delays = timedelta()
             last_gas = 0.0
@@ -362,7 +362,7 @@ class GPXTableCalculator:
                     last_gas = track_point.distance_from_start
                 waypoint_delays += layover
             print(
-                f"\n- {self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)}",
+                f"\n* {self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)}",
             )
 
     def print_routes(self) -> None:
@@ -397,7 +397,7 @@ class GPXTableCalculator:
         for route in self.gpx.routes:
             print(f"\n## Route: {route.name}")
             if route.description:
-                print(f"- {route.description}")
+                print(f"* {route.description}")
 
             print(self._format_output_header())
             dist = 0.0
