@@ -310,15 +310,19 @@ class GPXTableCalculator:
                 result += LLP_FMT.format(waypoint.latitude, waypoint.longitude)
             return result + OUT_FMT.format(
                 (waypoint.name or "").replace("\n", " "),
-                f"{self.format_long_length(round(track_point.distance_from_start - last_gas))}/{self.format_long_length(round(track_point.distance_from_start))}"
-                if self.is_gas(waypoint) or final_waypoint
-                else f"{self.format_long_length(round(track_point.distance_from_start))}",
+                (
+                    f"{self.format_long_length(round(track_point.distance_from_start - last_gas))}/{self.format_long_length(round(track_point.distance_from_start))}"
+                    if self.is_gas(waypoint) or final_waypoint
+                    else f"{self.format_long_length(round(track_point.distance_from_start))}"
+                ),
                 self.point_marker(waypoint),
-                (track_point.location.time + waypoint_delays)
-                .astimezone()
-                .strftime("%H:%M")
-                if track_point.location.time
-                else "",
+                (
+                    (track_point.location.time + waypoint_delays)
+                    .astimezone()
+                    .strftime("%H:%M")
+                    if track_point.location.time
+                    else ""
+                ),
                 waypoint.symbol or "",
                 f" (+{str(layover)[:-3]})" if layover else "",
             )
@@ -386,9 +390,11 @@ class GPXTableCalculator:
                 result += LLP_FMT.format(point.latitude, point.longitude)
             return result + OUT_FMT.format(
                 (point.name or "").replace("\n", " "),
-                f"{self.format_long_length(dist - last_gas)}/{self.format_long_length(dist)}"
-                if self.is_gas(point) or point is route.points[-1]
-                else f"{self.format_long_length(dist)}",
+                (
+                    f"{self.format_long_length(dist - last_gas)}/{self.format_long_length(dist)}"
+                    if self.is_gas(point) or point is route.points[-1]
+                    else f"{self.format_long_length(dist)}"
+                ),
                 self.point_marker(point),
                 timing.astimezone().strftime("%H:%M") if timing else "",
                 point.symbol or "",
@@ -583,8 +589,10 @@ class GPXTableCalculator:
         if (
             point.symbol
             and "Gas Station" in point.symbol
-            or re.search(r"\bGas\b|\bFuel\b", point.name or "", re.I)
+            or re.search(r"\bGas\b|\bFuel\b|\b(G)\b", point.name or "", re.I)
         ):
+            if not point.symbol:
+                point.symbol = "Gas"
             return "G"
         return ""
 
@@ -594,11 +602,13 @@ class GPXTableCalculator:
             point.symbol
             and "Restaurant" in point.symbol
             or re.search(
-                r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b",
+                r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b|\b(L)\b",
                 point.name or "",
                 re.I,
             )
         ):
+            if not point.symbol:
+                point.symbol = "Restaurant"
             return "L"
         return ""
 
@@ -609,8 +619,10 @@ class GPXTableCalculator:
         if (
             point.symbol
             and "Scenic Area" in point.symbol
-            or re.search(r"\bScenic Area\b|\bPhoto\b", point.name or "", re.I)
+            or re.search(r"\bScenic Area\b|\bPhoto\b|\b(P)\b", point.name or "", re.I)
         ):
+            if not point.symbol:
+                point.symbol = "Photos"
             return "P"
         return ""
 
@@ -621,7 +633,7 @@ class GPXTableCalculator:
         """:return: True if route point is a shaping/Via point"""
         if not point.name:
             return True
-        if point.name.startswith("Via "):
+        if point.name.startswith("Via ") or point.name.endswith("(V)"):
             return True
         for extension in point.extensions:
             if "ShapingPoint" in extension.tag:
