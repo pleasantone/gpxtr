@@ -333,6 +333,7 @@ class GPXTableCalculator:
                     ),
                 )
                 for wp in self.gpx.waypoints
+                if not self.shaping_point(wp)
             ]
             waypoints = sorted(
                 [(wp, tp) for wp, tps in waypoints for tp in tps],
