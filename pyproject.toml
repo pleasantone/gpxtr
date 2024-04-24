@@ -20,7 +20,8 @@ classifiers = [
 dependencies = [
     "astral",
     "gpxpy",
-    "markdown2"
+    "markdown2",
+    "python-dateutil"
 ]
 
 [project.urls]
