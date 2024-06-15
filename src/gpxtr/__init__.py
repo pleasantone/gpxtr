@@ -246,6 +246,7 @@ class GPXTableCalculator:
         self.waypoint_delays = DEFAULT_WAYPOINT_DELAYS
         self.waypoint_debounce = DEFAULT_WAYPOINT_DEBOUNCE
         self.last_waypoint_delta = DEFAULT_LAST_WAYPOINT_DELTA
+        self.ignore_times = False
 
     def print_header(self) -> None:
         """
@@ -275,10 +276,12 @@ class GPXTableCalculator:
             print(f"* Default speed: {self.format_speed(self.speed, True)}")
 
     def _populate_times(self) -> None:
+        if self.ignore_times:
+            self.gpx.remove_time()
         if not (self.depart_at and self.speed):
             return
         for track_no, track in enumerate(self.gpx.tracks):
-            # assume (for now) that if there are multiple tracks, 1 track = 1 day
+            # XXX assume (for now) that if there are multiple tracks, 1 track = 1 day
             depart_at = self.depart_at + timedelta(hours=24 * track_no)
             if track.segments[0].points[0].time:
                 delta = depart_at - track.segments[0].points[0].time
@@ -692,6 +695,7 @@ def create_markdown(args) -> None:
                     depart_at=args.departure,
                 )
                 table.display_coordinates = args.coordinates
+                table.ignore_times = args.ignore_times
                 table.print_header()
                 table.print_waypoints()
                 table.print_routes()
@@ -709,6 +713,9 @@ def main() -> None:
         default=None,
         action=_DateParser,
         help="set departure time for first point (local timezone)",
+    )
+    parser.add_argument(
+        "--ignore-times", action="store_true", help="Ignore track times"
     )
     parser.add_argument(
         "--speed", default=0.0, type=float, help="set average travel speed"
