@@ -275,15 +275,19 @@ class GPXTableCalculator:
             print(f"* Default speed: {self.format_speed(self.speed, True)}")
 
     def _populate_times(self) -> None:
+        if not (self.depart_at and self.speed):
+            return
         for track_no, track in enumerate(self.gpx.tracks):
-            if self.depart_at and self.speed:
-                if not track.has_times():
-                    # assume (for now) that if there are multiple tracks, 1 track = 1 day
-                    depart_at = self.depart_at + timedelta(hours=24 * track_no)
-                    track.segments[0].points[0].time = depart_at
-                    track.segments[-1].points[-1].time = depart_at + timedelta(
-                        hours=track.length_2d() / (self.speed * 1000)
-                    )
+            # assume (for now) that if there are multiple tracks, 1 track = 1 day
+            depart_at = self.depart_at + timedelta(hours=24 * track_no)
+            if track.segments[0].points[0].time:
+                delta = depart_at - track.segments[0].points[0].time
+                track.adjust_time(delta)
+            else:
+                track.segments[0].points[0].time = depart_at
+                track.segments[-1].points[-1].time = depart_at + timedelta(
+                    hours=track.length_2d() / (self.speed * 1000)
+                )
         self.gpx.add_missing_times()
 
     def print_waypoints(self) -> None:
@@ -502,6 +506,11 @@ class GPXTableCalculator:
                 if self.is_scenic_area(point)
                 else timedelta()
             )
+            or (
+                self.waypoint_delays.get("Restroom")
+                if self.is_restroom(point)
+                else timedelta()
+            )
             or self.waypoint_delays.get(point.symbol or "nil")
             or timedelta()
         )
@@ -513,6 +522,7 @@ class GPXTableCalculator:
             self.is_meal(point)
             or self.is_gas(point)
             or self.is_scenic_area(point)
+            or self.is_restroom(point)
             or " "
         )
 
@@ -624,6 +634,20 @@ class GPXTableCalculator:
             if not point.symbol:
                 point.symbol = "Photos"
             return "P"
+        return ""
+
+    @staticmethod
+    def is_restroom(
+        point: Union[gpxpy.gpx.GPXWaypoint, gpxpy.gpx.GPXRoutePoint]
+    ) -> str:
+        if (
+            point.symbol
+            and "Restroom" in point.symbol
+            or re.search(r"\bRestroom\b|\bBreak\b|\b(R)\b", point.name or "", re.I)
+        ):
+            if not point.symbol:
+                point.symbol = "Restroom"
+            return "B"
         return ""
 
     @staticmethod

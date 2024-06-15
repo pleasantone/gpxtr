@@ -29,7 +29,7 @@
 </wpt>
 
 <wpt lat="38.163014" lon="-121.606892">
-  <name>Isleton</name>
+  <name>Isleton (Lunch / Gas)</name>
   <src>https://scenic.app</src>
   <link href="https://scenic.app">
     <text>https://scenic.app</text>
@@ -45,7 +45,7 @@
 </wpt>
 
 <wpt lat="38.457900" lon="-121.500390">
-  <name>Freeport Bar &amp; Grill</name>
+  <name>Freeport Bar &amp; Grill (Restroom)</name>
   <src>https://scenic.app</src>
   <link href="https://scenic.app">
     <text>https://scenic.app</text>
@@ -53,7 +53,7 @@
 </wpt>
 
 <wpt lat="38.160687" lon="-121.692063">
-  <name>Rio Vista Shell</name>
+  <name>Rio Vista Shell Gas</name>
   <src>https://scenic.app</src>
   <link href="https://scenic.app">
     <text>https://scenic.app</text>
@@ -104,7 +104,7 @@
     <name>Riverboat Marina - Stop 1 (Via 8)</name>
   </rtept>
   <rtept lat="38.163014" lon="-121.606892">
-    <name>Isleton - Stop 2 (Via 9)</name>
+    <name>Isleton (Lunch) - Stop 2 (Via 9)</name>
   </rtept>
   <rtept lat="38.140970" lon="-121.581792">
     <name>Via 10</name>
@@ -125,7 +125,7 @@
     <name>Via 15</name>
   </rtept>
   <rtept lat="38.457900" lon="-121.500390">
-    <name>Freeport Bar &amp; Grill - Stop 4 (Via 16)</name>
+    <name>Freeport Bar &amp; Grill (Restroom) - Stop 4 (Via 16)</name>
   </rtept>
   <rtept lat="38.297813" lon="-121.630673">
     <name>Via 17</name>
@@ -137,7 +137,7 @@
     <name>Via 19</name>
   </rtept>
   <rtept lat="38.160687" lon="-121.692063">
-    <name>Rio Vista Shell - Stop 5 (Via 20)</name>
+    <name>Rio Vista Shell Gas - Stop 5 (Via 20)</name>
   </rtept>
   <rtept lat="38.138467" lon="-121.743030">
     <name>Via 21</name>
@@ -257,7 +257,7 @@
     </extensions>
   </rtept>
   <rtept lat="38.163014" lon="-121.606892">
-    <name>Isleton - Stop 2 (Via 9)</name>
+    <name>Isleton (Lunch) - Stop 2 (Via 9)</name>
     <extensions>
       <trp:ViaPoint/>
     </extensions>
@@ -299,7 +299,7 @@
     </extensions>
   </rtept>
   <rtept lat="38.457900" lon="-121.500390">
-    <name>Freeport Bar &amp; Grill - Stop 4 (Via 16)</name>
+    <name>Freeport Bar &amp; Grill (Restroom) - Stop 4 (Via 16)</name>
     <extensions>
       <trp:ViaPoint/>
     </extensions>
@@ -323,7 +323,7 @@
     </extensions>
   </rtept>
   <rtept lat="38.160687" lon="-121.692063">
-    <name>Rio Vista Shell - Stop 5 (Via 20)</name>
+    <name>Rio Vista Shell Gas - Stop 5 (Via 20)</name>
     <extensions>
       <trp:ViaPoint/>
     </extensions>
@@ -463,7 +463,7 @@
     <name>Riverboat Marina - Stop 1 (Via 8)</name>
   </rtept>
   <rtept lat="38.163014" lon="-121.606892">
-    <name>Isleton - Stop 2 (Via 9)</name>
+    <name>Isleton (Lunch) - Stop 2 (Via 9)</name>
     <extensions>
       <gpxx:RoutePointExtension>
         <gpxx:rpt lat="38.140970" lon="-121.581792"/>
@@ -482,7 +482,7 @@
     </extensions>
   </rtept>
   <rtept lat="38.457900" lon="-121.500390">
-    <name>Freeport Bar &amp; Grill - Stop 4 (Via 16)</name>
+    <name>Freeport Bar &amp; Grill (Restroom) - Stop 4 (Via 16)</name>
     <extensions>
       <gpxx:RoutePointExtension>
         <gpxx:rpt lat="38.297813" lon="-121.630673"/>
@@ -492,7 +492,7 @@
     </extensions>
   </rtept>
   <rtept lat="38.160687" lon="-121.692063">
-    <name>Rio Vista Shell - Stop 5 (Via 20)</name>
+    <name>Rio Vista Shell Gas - Stop 5 (Via 20)</name>
     <extensions>
       <gpxx:RoutePointExtension>
         <gpxx:rpt lat="38.138467" lon="-121.743030"/>
