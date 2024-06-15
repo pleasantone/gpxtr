@@ -4,14 +4,15 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Python: GPXtr",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtr/__init__.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "12/26/2024 08:00am", "/Users/pst/gpxtr/testdata/twixtmas.gpx"],
-            "xargs": ["--depart", "07/27/2023 09:15am", "/Users/pst/gpxtr/testdata/basecamp.gpx"]
+            "xargs": ["--depart", "06/15/2024 09:15:00am", "/Users/pst/gpxtr/testdata/scenic2.gpx"],
+            "args": ["--depart", "07/27/2023 09:15am", "/Users/pst/gpxtr/testdata/basecamp.gpx"]
         }
     ]
 }
