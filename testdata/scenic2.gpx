@@ -29,7 +29,7 @@
 </wpt>
 
 <wpt lat="38.163014" lon="-121.606892">
-  <name>Isleton (Lunch / Gas)</name>
+  <name>Isleton</name>
   <src>https://scenic.app</src>
   <link href="https://scenic.app">
     <text>https://scenic.app</text>
@@ -45,7 +45,7 @@
 </wpt>
 
 <wpt lat="38.457900" lon="-121.500390">
-  <name>Freeport Bar &amp; Grill (Restroom)</name>
+  <name>Freeport Bar &amp; Grill (Lunch / Gas)</name>
   <src>https://scenic.app</src>
   <link href="https://scenic.app">
     <text>https://scenic.app</text>
@@ -53,7 +53,7 @@
 </wpt>
 
 <wpt lat="38.160687" lon="-121.692063">
-  <name>Rio Vista Shell Gas</name>
+  <name>Rio Vista Shell</name>
   <src>https://scenic.app</src>
   <link href="https://scenic.app">
     <text>https://scenic.app</text>
