@@ -292,6 +292,16 @@ class GPXTableCalculator:
                     hours=track.length_2d() / (self.speed * 1000)
                 )
         self.gpx.add_missing_times()
+        return
+        for track in self.gpx.tracks:
+            for segment in track.segments:
+                segment.points[0].speed = self.speed
+                segment.points[-1].speed = self.speed
+        self.gpx.add_missing_speeds()
+        for track in self.gpx.tracks:
+            for segment in track.segments:
+                for point in segment.points:
+                    print(point.speed, point)
 
     def print_waypoints(self) -> None:
         """
@@ -533,8 +543,7 @@ class GPXTableCalculator:
         """distance is in meters, speed is in km/h"""
         return timedelta(minutes=dist / 1000.0 / self.speed * 60.0)
 
-    @staticmethod
-    def layover(point: gpxpy.gpx.GPXRoutePoint) -> timedelta:
+    def layover(self, point: gpxpy.gpx.GPXRoutePoint) -> timedelta:
         """layover time at a given RoutePoint (Basecamp extension)"""
         for extension in point.extensions:
             for duration in extension.findall("trp:StopDuration", XML_NAMESPACE):
@@ -544,7 +553,7 @@ class GPXTableCalculator:
                         hours=int(match.group(2) or "0"),
                         minutes=int(match.group(4) or "0"),
                     )
-        return timedelta()
+        return self.point_delay(point)
 
     def departure_time(
         self,
