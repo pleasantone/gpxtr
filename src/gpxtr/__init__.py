@@ -439,7 +439,11 @@ class GPXTableCalculator:
                     departure = self.departure_time(point, dist == 0.0)
                     if departure:
                         timing = departure
-                    delay = self.layover(point)
+                    delay = (
+                        self.layover(point)
+                        if point not in [route.points[0], route.points[-1]]
+                        else timedelta()
+                    )
                     if last_gas > dist:
                         last_gas = 0.0
                     print(_rpe())
