@@ -26,9 +26,7 @@ import markdown2
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
 
-DEFAULT_LAST_WAYPOINT_DELTA = (
-    200.0  # 200m allowed between last waypoint and end of track
-)
+DEFAULT_WAYPOINT_DELTA = 200.0  # 200m allowed between waypoint and start/end of track
 DEFAULT_WAYPOINT_DEBOUNCE = (
     2000.0  # 2km between duplicates of the same waypoint on a track
 )
@@ -245,7 +243,7 @@ class GPXTableCalculator:
         self.display_coordinates = False
         self.waypoint_delays = DEFAULT_WAYPOINT_DELAYS
         self.waypoint_debounce = DEFAULT_WAYPOINT_DEBOUNCE
-        self.last_waypoint_delta = DEFAULT_LAST_WAYPOINT_DELTA
+        self.waypoint_delta = DEFAULT_WAYPOINT_DELTA
         self.ignore_times = False
 
     def print_header(self) -> None:
@@ -276,32 +274,25 @@ class GPXTableCalculator:
             print(f"* Default speed: {self.format_speed(self.speed, True)}")
 
     def _populate_times(self) -> None:
-        if self.ignore_times:
-            self.gpx.remove_time()
-        if not (self.depart_at and self.speed):
+        if not self.depart_at or not self.speed:
             return
         for track_no, track in enumerate(self.gpx.tracks):
-            # XXX assume (for now) that if there are multiple tracks, 1 track = 1 day
+            # assume (for now) that if there are multiple tracks, 1 track = 1 day
             depart_at = self.depart_at + timedelta(hours=24 * track_no)
-            if track.segments[0].points[0].time:
-                delta = depart_at - track.segments[0].points[0].time
-                track.adjust_time(delta)
+            time_bounds = track.get_time_bounds()
+            # handle the case where the GPX generator is putting crap for times in the tracks (basecamp)
+            if self.ignore_times or time_bounds.start_time == time_bounds.end_time:
+                track.remove_time()
+            time_bounds = track.get_time_bounds()
+            # if track has legitimate times in it, just adjust our delta for departure
+            if time_bounds.start_time:
+                track.adjust_time(depart_at - time_bounds.start_time)
             else:
                 track.segments[0].points[0].time = depart_at
                 track.segments[-1].points[-1].time = depart_at + timedelta(
                     hours=track.length_2d() / (self.speed * 1000)
                 )
         self.gpx.add_missing_times()
-        return
-        for track in self.gpx.tracks:
-            for segment in track.segments:
-                segment.points[0].speed = self.speed
-                segment.points[-1].speed = self.speed
-        self.gpx.add_missing_speeds()
-        for track in self.gpx.tracks:
-            for segment in track.segments:
-                for point in segment.points:
-                    print(point.speed, point)
 
     def print_waypoints(self) -> None:
         """
@@ -320,7 +311,7 @@ class GPXTableCalculator:
         def _wpe() -> str:
             final_waypoint = (
                 abs(track_point.distance_from_start - track_length)
-                < self.last_waypoint_delta
+                < self.waypoint_delta
             )
             result = ""
             if self.display_coordinates:
@@ -332,7 +323,12 @@ class GPXTableCalculator:
                     if self.is_gas(waypoint) or final_waypoint
                     else f"{self.format_long_length(round(track_point.distance_from_start))}"
                 ),
-                self.point_marker(waypoint),
+                (
+                    self.point_marker(waypoint)
+                    if track_point.distance_from_start > self.waypoint_delta
+                    and not final_waypoint
+                    else ""
+                ),
                 (
                     (track_point.location.time + waypoint_delays)
                     .astimezone()
@@ -412,7 +408,11 @@ class GPXTableCalculator:
                     if self.is_gas(point) or point is route.points[-1]
                     else f"{self.format_long_length(dist)}"
                 ),
-                self.point_marker(point),
+                (
+                    self.point_marker(point)
+                    if point not in [route.points[0], route.points[-1]]
+                    else ""
+                ),
                 timing.astimezone().strftime("%H:%M") if timing else "",
                 point.symbol or "",
                 f" (+{str(delay)[:-3]})" if delay else "",
@@ -538,8 +538,8 @@ class GPXTableCalculator:
         return (
             self.is_meal(point)
             or self.is_gas(point)
-            or self.is_scenic_area(point)
-            or self.is_restroom(point)
+            #            or self.is_scenic_area(point)
+            #            or self.is_restroom(point)
             or " "
         )
 

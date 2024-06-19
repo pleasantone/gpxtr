@@ -8,12 +8,12 @@
 
         {
             "name": "Python: GPXtr",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtr/__init__.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "06/15/2024 09:15:00am", "/Users/pst/gpxtr/testdata/scenic2.gpx"],
-            "xargs": ["--depart", "07/27/2023 09:15am", "/Users/pst/gpxtr/testdata/basecamp.gpx"]
+            "xargs": ["--depart", "06/15/2024 09:15:00am", "--ignore", "/Users/pst/gpxtr/testdata/scenic2.gpx"],
+            "args": ["--depart", "07/27/2023 09:15:00am", "/Users/pst/gpxtr/testdata/basecamp.gpx"]
         }
     ]
 }
