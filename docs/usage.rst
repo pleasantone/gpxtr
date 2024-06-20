@@ -25,20 +25,22 @@ Once installed, you should be able to invoke it as *gpxtr*.
 .. code-block:: console
 
    $ gpxtr --help
-   usage: gpxtr [-h] [--output OUTPUT] [--sort SORT] [--departure DEPARTURE] [--speed SPEED] [--html] [--metric] input [input ...]
+   usage: gpxtr [-h] [--departure DEPARTURE] [--ignore-times] [--speed SPEED]
+             [--html] [--metric] [--coordinates]
+             input [input ...]
 
    positional arguments:
-   input                 input file(s)
+      input                 input file(s)
 
    optional arguments:
-   -h, --help            show this help message and exit
-   --output OUTPUT       output file
-   --sort SORT           sort algorithm (for waypoints only)
-   --departure DEPARTURE
-                         set departure time for first point (local timezone)
-   --speed SPEED         set average travel speed
-   --html                output in HTML, not markdown
-   --metric              Use metric units (default imperial)
+      -h, --help            show this help message and exit
+      --departure DEPARTURE
+                            set departure time for first point (local timezone)
+      --ignore-times        Ignore track times
+      --speed SPEED         set average travel speed
+      --html                output in HTML, not markdown
+      --metric              Use metric units (default imperial)
+      --coordinates         Display latitude and longitude of waypoints
 
 
 .. _Python virtual environments: https://docs.python.org/3/library/venv.html
@@ -80,22 +82,23 @@ The author specified delays and layovers in the route itself.
 .. code-block:: console
 
    $ gpxtr testdata/basecamp-route.gpx
-   - Garmin Desktop App
-   - Default speed: 30.00 mph
+   * Garmin Desktop App
+   * Default speed: 30.00 mph
 
    ## Route: Fort Ross Run
-   - Sunrise: 06:11, Sunset: 20:21
 
-   |        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes
-   | :------------------: | :----------------------------- | ------: | - | ----: | :----
-   |    38.0045,-122.5447 | Peet's Coffee Northgate Mall   |       0 |   | 09:15 | Restaurant
-   |    38.0621,-122.6987 | Nicasio Square                 |      12 |   | 09:39 | Restroom (+0:15)
-   |    38.5022,-122.9983 | Pat's International            |      65 |   | 11:41 | Restaurant (+1:00)
-   |    38.5018,-123.0001 | 76 Guerneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
-   |    38.5352,-123.0871 | Willy's America                |      79 |   | 13:23 | Truck (+0:05)
-   |    38.3292,-123.0436 | 76 Bodega Bay                  |  67/132 | G | 15:14 | Gas Station (+0:15)
-   |    38.0680,-122.8064 | Point Reyes Station            |     165 |   | 16:36 | Restroom (+0:05)
-   |    37.8979,-122.5150 | Starbucks Strawberry Village   |  63/195 |   | 17:41 | Restaurant
+   | Name                           |   Dist. | G |  ETA  | Notes
+   | :----------------------------- | ------: | - | ----: | :----
+   | Peet's Coffee Northgate Mall   |       0 |   | 09:15 | Restaurant
+   | Nicasio Square                 |      12 |   | 09:39 | Restroom (+0:15)
+   | Pat's International            |      65 | L | 11:41 | Restaurant (+1:00)
+   | 76 Gureneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
+   | Willy's America                |      79 |   | 13:23 | Scenic Area (+0:05)
+   | 76 Bodega Bay                  |  67/132 | G | 15:14 | Gas Station (+0:15)
+   | Point Reyes Station            |     165 |   | 16:36 | Restroom (+0:05)
+   | Starbucks Strawberry Village   |  63/195 |   | 17:41 | Restaurant
+
+   - 07/30/23: Sunrise: 06:11, Starts: 09:15, Ends: 17:41, Sunset: 20:20
 
 Building a table from a track and waypoints
 -------------------------------------------
@@ -111,24 +114,26 @@ sort everything based upon the track_distance (distance from track start) of a w
 
 .. code-block:: console
 
-   $ gpxtr --departure "07/30/2022 09:15" --sort track_distance testdata/basecamp-tracks.gpx
-   - Garmin Desktop App
-   - Total distance: 196 mi
-   - Default speed: 30.00 mph
-   - Sunrise: 06:11, Sunset: 20:20
-   ## Waypoints
+   ❯ gpxtr --departure "07/30/2022 09:15:00" testdata/basecamp-tracks.gpx
+   * Garmin Desktop App
+   * Departure at Sat Jul 30 09:15:00 2022
+   * Total distance: 196 mi
+   * Default speed: 30.00 mph
 
-   |        Lat,Lon       | Name                           |   Dist. | G |  ETA  | Notes
-   | :------------------: | :----------------------------- | ------: | - | ----: | :----
-   |    38.0045,-122.5447 | Peet's Coffee Northgate Mall   |       0 |   | 09:15 | Restaurant
-   |    38.0621,-122.6987 | Nicasio Square                 |      12 |   | 09:39 | Restroom (+0:15)
-   |    38.5022,-122.9983 | Pat's International            |      65 |   | 11:40 | Restaurant (+1:00)
-   |    38.5018,-123.0001 | 76 Guerneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
-   |    38.5352,-123.0871 | Willy's America                |      79 |   | 13:22 | Truck
-   |    38.3292,-123.0436 | 76 Bodega Bay                  |  67/132 | G | 15:09 | Gas Station (+0:15)
-   |    38.0680,-122.8064 | Point Reyes Station            |     165 |   | 16:30 | Restroom (+0:15)
-   |    37.8979,-122.5150 | Starbucks Strawberry Village   |  63/196 |   | 17:46 | Restaurant (+1:00)
-   |    37.8979,-122.5150 | END: Fort Ross Run tk          |  63/196 |   | 18:46 | END
+   ## Track: Fort Ross Run tk
+
+   | Name                           |   Dist. | G |  ETA  | Notes
+   | :----------------------------- | ------: | - | ----: | :----
+   | Peet's Coffee Northgate Mall   |       0 |   | 09:15 | Restaurant
+   | Nicasio Square                 |      12 |   | 09:39 | Restroom (+0:15)
+   | Pat's International            |      65 | L | 11:40 | Restaurant (+1:00)
+   | 76 Guerneville                 |   65/65 | G | 12:40 | Gas Station (+0:15)
+   | Willy's America                |      79 |   | 13:22 | Scenic Area (+0:05)
+   | 76 Bodega Bay                  |  67/132 | G | 15:14 | Gas Station (+0:15)
+   | Point Reyes Station            |     165 |   | 16:35 | Restroom (+0:15)
+   | Starbucks Strawberry Village   |  63/196 |   | 17:51 | Restaurant
+
+   * 07/30/22: Sunrise: 06:11, Starts: 09:15, Ends: 17:51, Sunset: 20:20
 
 Limitations:
    - a waypoint will be matched with the nearest point on it track, if a track
@@ -136,11 +141,3 @@ Limitations:
      or inbound leg.
    - a pseudo-waypoint will be added indicating the last point in the track. If this is
      redundant with the final waypoint, one may be deleted.
-
-Sort Values
-------------
-
-:track_distance: The distance a waypoint appears along a track
-:total_distance: The distance a waypoint appears along all tracks in a file (think multi-day trip)
-:name: The name of the waypoint
-:symbol: The type of waypoint (Restaurant, etc)
