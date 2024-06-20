@@ -593,7 +593,7 @@ class GPXTableCalculator:
             astral.LocationInfo(
                 "End Point", "", "", end.latitude, end.longitude
             ).observer,
-            date=start.time,
+            date=end.time + (delay or timedelta()),
         )
         times = {
             "Sunrise": sun_start["sunrise"],
@@ -645,7 +645,7 @@ class GPXTableCalculator:
         if (
             point.symbol
             and "Scenic Area" in point.symbol
-            or re.search(r"\bScenic Area\b|\bPhoto\b|\b(P)\b", point.name or "", re.I)
+            or re.search(r"\bScenic Area\b|\bPhotos?\b|\b(P)\b", point.name or "", re.I)
         ):
             if not point.symbol:
                 point.symbol = "Photos"
