@@ -21,7 +21,8 @@ dependencies = [
     "astral",
     "gpxpy",
     "markdown2",
-    "python-dateutil"
+    "python-dateutil",
+    "flask"
 ]
 
 [project.urls]
@@ -29,7 +30,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/pleasantone/gpxtr/issues"
 
 [project.scripts]
-gpxtr = "gpxtr:main"
+gpxtr = "gpxtr.cli:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "gpxtr.__version__"}
