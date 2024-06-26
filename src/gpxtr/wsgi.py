@@ -17,7 +17,7 @@ import gpxpy.utils
 import markdown2
 
 
-from .gpxtr import GPXTableCalculator, DEFAULT_TRAVEL_SPEED
+from . import GPXTableCalculator, DEFAULT_TRAVEL_SPEED
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
@@ -42,7 +42,7 @@ def create_table(stream) -> str:
             table.ignore_times = request.form.get("ignore_times") == "on"
             table.display_coordinates = request.form.get("coordinates") == "on"
             table.imperial = request.form.get("metric") != "on"
-            table.speed = int(
+            table.speed = float(
                 request.form.get("speed", DEFAULT_TRAVEL_SPEED) or DEFAULT_TRAVEL_SPEED
             )
 
