@@ -17,36 +17,6 @@ import gpxpy.utils
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
 
-# 200m allowed between waypoint and start/end of track
-DEFAULT_WAYPOINT_DELTA = 200.0
-
-# 2km between duplicates of the same waypoint on a track
-DEFAULT_WAYPOINT_DEBOUNCE = 2000.0
-
-#: Assume traveling at 30mph/50kph
-DEFAULT_TRAVEL_SPEED = 30.0 / KM_TO_MILES
-
-#: dict: Add a layover time automatically if a waypoint symbol matches
-DEFAULT_WAYPOINT_DELAYS = {
-    "Restaurant": timedelta(minutes=60),
-    "Gas Station": timedelta(minutes=15),
-    "Restroom": timedelta(minutes=15),
-    "Photo": timedelta(minutes=5),
-    "Scenic Area": timedelta(minutes=5),
-}
-
-LLP_HDR = "|        Lat,Lon       "
-LLP_SEP = "| :------------------: "
-LLP_FMT = "| {:-10.4f},{:.4f} "
-OUT_HDR = "| Name                           |   Dist. | G |  ETA  | Notes"
-OUT_SEP = "| :----------------------------- | ------: | - | ----: | :----"
-OUT_FMT = "| {:30.30} | {:>7} | {:1} | {:>5} | {}{}"
-
-XML_NAMESPACE = {
-    "trp": "http://www.garmin.com/xmlschemas/TripExtensions/v1",
-    "gpxx": "http://www.garmin.com/xmlschemas/GpxExtensions/v3",
-}
-
 
 class NearestLocationDataExt(NamedTuple):
     """
@@ -213,7 +183,6 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
 
 
 class GPXTableCalculator:
-    # pylint: disable=too-many-instance-attributes
     """
     Create a waypoint/route-point table based upon GPX information.
 
@@ -226,36 +195,69 @@ class GPXTableCalculator:
     :param bool display_coordinates: include latitude and longitude of points in table
     """
 
+    #: 200m allowed between waypoint and start/end of track
+    waypoint_delta = 200.0
+
+    #: 2km between duplicates of the same waypoint on a track
+    waypoint_debounce = 2000.0
+
+    #: Assume traveling at 30mph/50kph
+    default_travel_speed = 30.0 / KM_TO_MILES
+
+    #: dict: Add a layover time automatically if a waypoint symbol matches
+    waypoint_delays = {
+        "Restaurant": timedelta(minutes=60),
+        "Gas Station": timedelta(minutes=15),
+        "Restroom": timedelta(minutes=15),
+        "Photo": timedelta(minutes=5),
+        "Scenic Area": timedelta(minutes=5),
+    }
+
+    LLP_HDR = "|        Lat,Lon       "
+    LLP_SEP = "| :------------------: "
+    LLP_FMT = "| {:-10.4f},{:.4f} "
+    OUT_HDR = "| Name                           |   Dist. | G |  ETA  | Notes"
+    OUT_SEP = "| :----------------------------- | ------: | - | ----: | :----"
+    OUT_FMT = "| {:30.30} | {:>7} | {:1} | {:>5} | {}{}"
+
+    XML_NAMESPACE = {
+        "trp": "http://www.garmin.com/xmlschemas/TripExtensions/v1",
+        "gpxx": "http://www.garmin.com/xmlschemas/GpxExtensions/v3",
+    }
+
+    # pylint: disable=too-many-arguments
     def __init__(
         self,
         gpx: gpxpy.gpx.GPX,
         output: Optional[TextIO] = None,
         imperial: bool = True,
-        speed: float = 0.0,
+        speed: float = 30.0 / KM_TO_MILES,
         depart_at: Optional[datetime] = None,
         ignore_times: bool = False,
         display_coordinates: bool = False,
     ) -> None:
         self.gpx = gpx
         self.output = output
-        self.speed: float = (
+        self.speed = (
             speed / KM_TO_MILES if imperial else speed
-        ) or DEFAULT_TRAVEL_SPEED
+        ) or self.default_travel_speed
         self.imperial: bool = imperial
         self.depart_at: Optional[datetime] = depart_at
         self.ignore_times: bool = ignore_times
         self.display_coordinates: bool = display_coordinates
-        #: delay times for various waypoints
-        self.waypoint_delays: dict = DEFAULT_WAYPOINT_DELAYS
-        self.waypoint_debounce: float = DEFAULT_WAYPOINT_DEBOUNCE
-        self.waypoint_delta: float = DEFAULT_WAYPOINT_DELTA
+
+    def print_all(self) -> None:
+        """
+        Output full combination of header, waypoints, and routes.
+        """
+        self.print_header()
+        self.print_waypoints()
+        self.print_routes()
 
     def print_header(self) -> None:
         """
         Print to stream generic information about the GPX data such as name, creator, and calculation
         variables.
-
-        :return: nothing
         """
         if self.gpx.name:
             print(f"## {self.gpx.name}", file=self.output)
@@ -309,8 +311,6 @@ class GPXTableCalculator:
         Look for all the waypoints associated with tracks present to attempt to reconstruct
         the order and distance of the waypoints. If a departure time has been set, estimate
         the arrival time at each waypoint and probable layover times.
-
-        :return: nothing
         """
 
         def _wpe() -> str:
@@ -320,8 +320,8 @@ class GPXTableCalculator:
             )
             result = ""
             if self.display_coordinates:
-                result += LLP_FMT.format(waypoint.latitude, waypoint.longitude)
-            return result + OUT_FMT.format(
+                result += self.LLP_FMT.format(waypoint.latitude, waypoint.longitude)
+            return result + self.OUT_FMT.format(
                 (waypoint.name or "").replace("\n", " "),
                 (
                     f"{self._format_long_length(round(track_point.distance_from_start - last_gas))}/{self._format_long_length(round(track_point.distance_from_start))}"
@@ -393,21 +393,20 @@ class GPXTableCalculator:
                 print(f"\n* {almanac}", file=self.output)
 
     def print_routes(self) -> None:
+        # pylint: disable=too-many-branches
         """
         Print route points present in GPX routes.
 
         If Garmin extensions to create "route-tracks" are present will calculate distances, arrival and departure
         times properly. If the route points have symbols encoded properly, will automatically compute layover
         estimates as well as gas stops.
-
-        :return: nothing
         """
 
         def _rpe() -> str:
             result = ""
             if self.display_coordinates:
-                result += LLP_FMT.format(point.latitude, point.longitude)
-            return result + OUT_FMT.format(
+                result += self.LLP_FMT.format(point.latitude, point.longitude)
+            return result + self.OUT_FMT.format(
                 (point.name or "").replace("\n", " "),
                 (
                     f"{self._format_long_length(dist - last_gas)}/{self._format_long_length(dist)}"
@@ -462,7 +461,9 @@ class GPXTableCalculator:
                     previous[0], previous[1], None, current[0], current[1], None
                 )
                 for extension in point.extensions:
-                    for extension_point in extension.findall("gpxx:rpt", XML_NAMESPACE):
+                    for extension_point in extension.findall(
+                        "gpxx:rpt", self.XML_NAMESPACE
+                    ):
                         current = float(extension_point.get("lat")), float(
                             extension_point.get("lon")
                         )
@@ -479,8 +480,8 @@ class GPXTableCalculator:
 
     def _format_output_header(self) -> str:
         if self.display_coordinates:
-            return f"\n{LLP_HDR}{OUT_HDR}\n{LLP_SEP}{OUT_SEP}"
-        return f"\n{OUT_HDR}\n{OUT_SEP}"
+            return f"\n{self.LLP_HDR}{self.OUT_HDR}\n{self.LLP_SEP}{self.OUT_SEP}"
+        return f"\n{self.OUT_HDR}\n{self.OUT_SEP}"
 
     @staticmethod
     def _format_time(time_s: float, seconds: bool) -> str:
@@ -556,7 +557,7 @@ class GPXTableCalculator:
     def _layover(self, point: gpxpy.gpx.GPXRoutePoint) -> timedelta:
         """layover time at a given RoutePoint (Basecamp extension)"""
         for extension in point.extensions:
-            for duration in extension.findall("trp:StopDuration", XML_NAMESPACE):
+            for duration in extension.findall("trp:StopDuration", self.XML_NAMESPACE):
                 match = re.match(r"^PT((\d+)H)?((\d+)M)?$", duration.text)
                 if match:
                     return timedelta(
@@ -576,7 +577,7 @@ class GPXTableCalculator:
         if use_departure and self.depart_at:
             return self.depart_at
         for extension in point.extensions:
-            for departure in extension.findall("trp:DepartureTime", XML_NAMESPACE):
+            for departure in extension.findall("trp:DepartureTime", self.XML_NAMESPACE):
                 return datetime.fromisoformat(departure.text.replace("Z", "+00:00"))
         return None
 

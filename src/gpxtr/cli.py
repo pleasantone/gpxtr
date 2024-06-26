@@ -5,7 +5,6 @@ GPXtr - Create a markdown template from a Garmin GPX file for route information
 
 import argparse
 import io
-import sys
 from datetime import datetime
 
 import dateutil.parser
@@ -18,21 +17,19 @@ import markdown2
 from . import GPXTableCalculator
 
 
-def create_markdown(args) -> None:
+def create_markdown(args, output=None) -> None:
     for handle in args.input:
         with handle as stream:
             try:
-                table = GPXTableCalculator(
+                GPXTableCalculator(
                     gpxpy.parse(stream),
+                    output=output,
                     imperial=not args.metric,
                     speed=args.speed,
                     depart_at=args.departure,
-                )
-                table.display_coordinates = args.coordinates
-                table.ignore_times = args.ignore_times
-                table.print_header()
-                table.print_waypoints()
-                table.print_routes()
+                    display_coordinates=args.coordinates,
+                    ignore_times=args.ignore_times,
+                ).print_all()
             except gpxpy.gpx.GPXException as err:
                 raise SystemExit(f"{handle.name}: {err}") from err
 
@@ -94,10 +91,7 @@ def main() -> None:
 
     if args.html:
         with io.StringIO() as buffer:
-            real_stdout = sys.stdout
-            sys.stdout = buffer
-            create_markdown(args)
-            sys.stdout = real_stdout
+            create_markdown(args, output=buffer)
             buffer.flush()
             print(markdown2.markdown(buffer.getvalue(), extras=["tables"]))
     else:

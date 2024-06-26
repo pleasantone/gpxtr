@@ -4,7 +4,6 @@ GPXtr - Create a markdown template from a Garmin GPX file for route information
 """
 
 import io
-import sys
 import html
 from datetime import datetime
 from flask import Flask, request, flash, redirect, render_template, abort
@@ -17,7 +16,7 @@ import gpxpy.utils
 import markdown2
 
 
-from . import GPXTableCalculator, DEFAULT_TRAVEL_SPEED
+from . import GPXTableCalculator
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
@@ -25,32 +24,28 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
 
 def create_table(stream) -> str:
     try:
-        with io.StringIO() as buffer:
-            real_stdout = sys.stdout
-            sys.stdout = buffer
 
-            table = GPXTableCalculator(gpxpy.parse(stream))
-
-            depart_at = request.form.get("departure")
-            if depart_at:
-                table.depart_at = dateutil.parser.parse(
-                    depart_at,
-                    default=datetime.now(dateutil.tz.tzlocal()).replace(
-                        second=0, microsecond=0
-                    ),
-                )
-            table.ignore_times = request.form.get("ignore_times") == "on"
-            table.display_coordinates = request.form.get("coordinates") == "on"
-            table.imperial = request.form.get("metric") != "on"
-            table.speed = float(
-                request.form.get("speed", DEFAULT_TRAVEL_SPEED) or DEFAULT_TRAVEL_SPEED
+        depart_at = None
+        departure = request.form.get("departure")
+        if departure:
+            depart_at = dateutil.parser.parse(
+                departure,
+                default=datetime.now(dateutil.tz.tzlocal()).replace(
+                    second=0, microsecond=0
+                ),
             )
 
-            table.print_header()
-            table.print_waypoints()
-            table.print_routes()
+        with io.StringIO() as buffer:
+            GPXTableCalculator(
+                gpxpy.parse(stream),
+                output=buffer,
+                depart_at=depart_at,
+                ignore_times=request.form.get("ignore_times") == "on",
+                display_coordinates=request.form.get("coordinates") == "on",
+                imperial=request.form.get("metric") != "on",
+                speed=float(request.form.get("speed") or 0.0),
+            ).print_all()
 
-            sys.stdout = real_stdout
             buffer.flush()
             output = buffer.getvalue()
             if request.form.get("output") == "markdown":
@@ -77,4 +72,4 @@ def upload_file():
             flash("No selected file")
             return redirect(request.url)
         return create_table(file)
-    return render_template("upload.html", speed=DEFAULT_TRAVEL_SPEED)
+    return render_template("upload.html")
