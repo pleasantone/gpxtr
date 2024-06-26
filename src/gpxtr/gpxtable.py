@@ -3,22 +3,16 @@
 GPXtr - Create a markdown template from a Garmin GPX file for route information
 """
 
-import argparse
-import io
 import math
 import re
-import sys
 from datetime import datetime, timedelta
 from typing import Optional, Union, List, NamedTuple
 
 import astral
 import astral.sun
-import dateutil.parser
-import dateutil.tz
 import gpxpy.gpx
 import gpxpy.geo
 import gpxpy.utils
-import markdown2
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
@@ -110,6 +104,7 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
         threshold_distance: float = 0.01,
         deduplicate_distance: float = 0.0,
     ) -> List[NearestLocationDataExt]:
+        # pylint: disable=too-many-locals
         """
         Returns a list of locations of elements like
         consisting of points where the location may be on the track
@@ -213,6 +208,7 @@ class GPXTrackExt(gpxpy.gpx.GPXTrack):
 
 
 class GPXTableCalculator:
+    # pylint: disable=too-many-instance-attributes
     """
     Create a waypoint/route-point table based upon GPX information.
 
@@ -376,7 +372,11 @@ class GPXTableCalculator:
                 if self.is_gas(waypoint):
                     last_gas = track_point.distance_from_start
                 waypoint_delays += layover
-            almanac = self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)
+            almanac = self.sun_rise_set(
+                track.segments[0].points[0],
+                track.segments[-1].points[-1],
+                delay=waypoint_delays,
+            )
             if almanac:
                 print(f"\n* {almanac}")
 
@@ -676,88 +676,3 @@ class GPXTableCalculator:
             if "ShapingPoint" in extension.tag:
                 return True
         return False
-
-
-class _DateParser(argparse.Action):
-    """
-    Argparse extension to support natural date parsing.
-
-    Date string must be sent in complete so needs quoting on command line.
-    :meta private:
-    """
-
-    def __call__(self, parser, namespace, values, option_strings=None):
-        setattr(
-            namespace,
-            self.dest,
-            dateutil.parser.parse(values, default=datetime.now(dateutil.tz.tzlocal())),
-        )
-
-
-def create_markdown(args) -> None:
-    for handle in args.input:
-        with handle as stream:
-            try:
-                table = GPXTableCalculator(
-                    gpxpy.parse(stream),
-                    imperial=not args.metric,
-                    speed=args.speed,
-                    depart_at=args.departure,
-                )
-                table.display_coordinates = args.coordinates
-                table.ignore_times = args.ignore_times
-                table.print_header()
-                table.print_waypoints()
-                table.print_routes()
-            except gpxpy.gpx.GPXException as err:
-                raise SystemExit(f"{handle.name}: {err}") from err
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "input", nargs="+", type=argparse.FileType("r"), help="input file(s)"
-    )
-    parser.add_argument(
-        "--departure",
-        default=None,
-        action=_DateParser,
-        help="set departure time for first point (local timezone)",
-    )
-    parser.add_argument(
-        "--ignore-times", action="store_true", help="Ignore track times"
-    )
-    parser.add_argument(
-        "--speed", default=0.0, type=float, help="set average travel speed"
-    )
-    parser.add_argument(
-        "--html", action="store_true", help="output in HTML, not markdown"
-    )
-    parser.add_argument(
-        "--metric", action="store_true", help="Use metric units (default imperial)"
-    )
-    parser.add_argument(
-        "--coordinates",
-        action="store_true",
-        help="Display latitude and longitude of waypoints",
-    )
-
-    try:
-        args = parser.parse_args()
-    except ValueError as err:
-        raise SystemExit(err) from err
-
-    if args.html:
-        with io.StringIO() as buffer:
-            real_stdout = sys.stdout
-            sys.stdout = buffer
-            create_markdown(args)
-            sys.stdout = real_stdout
-            buffer.flush()
-            print(markdown2.markdown(buffer.getvalue(), extras=["tables"]))
-    else:
-        create_markdown(args)
-
-
-if __name__ == "__main__":
-    main()
