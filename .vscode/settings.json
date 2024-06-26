@@ -12,6 +12,7 @@
         "gpxtr",
         "gpxx",
         "Guerneville",
+        "htmlcode",
         "iloc",
         "intersphinx",
         "itertuples",
@@ -24,11 +25,13 @@
         "pleasantone",
         "pydatetime",
         "quickstart",
+        "savefile",
         "scipy",
         "testdata",
         "toctree",
         "tzlocal",
-        "venv"
+        "venv",
+        "werkzeug"
     ],
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter",

@@ -3,8 +3,6 @@
 GPXtr - Create a markdown template from a Garmin GPX file for route information
 """
 
-__version__ = "0.5.0"
-
 import argparse
 import io
 import math
@@ -21,7 +19,6 @@ import gpxpy.gpx
 import gpxpy.geo
 import gpxpy.utils
 import markdown2
-
 
 KM_TO_MILES = 0.621371
 M_TO_FEET = 3.28084
@@ -379,9 +376,9 @@ class GPXTableCalculator:
                 if self.is_gas(waypoint):
                     last_gas = track_point.distance_from_start
                 waypoint_delays += layover
-            print(
-                f"\n* {self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)}",
-            )
+            almanac = self.sun_rise_set(track.segments[0].points[0], track.segments[-1].points[-1], delay=waypoint_delays)
+            if almanac:
+                print(f"\n* {almanac}")
 
     def print_routes(self) -> None:
         """
@@ -467,9 +464,9 @@ class GPXTableCalculator:
                 previous = current
             if timing:
                 route.points[-1].time = timing
-            print(
-                f"\n- {self.sun_rise_set(route.points[0], route.points[-1])}",
-            )
+            almanac = self.sun_rise_set(route.points[0], route.points[-1])
+            if almanac:
+                print(f"\n* {almanac}")
 
     def _format_output_header(self) -> str:
         if self.display_coordinates:
