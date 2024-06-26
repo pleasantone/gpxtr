@@ -16,7 +16,7 @@
           <div class="row mb-3">
             <label class="col-sm-2 col-form-label" for="file">GPX file</label>
             <div class="col-sm-10">
-              <input class="form-control" type="file" id="file" name="file" required>
+              <input class="form-control-file" type="file" id="file" name="file" required>
             </div>
           </div>
 
@@ -37,8 +37,8 @@
 
           <div class="input-group mb-3">
             <label class="input-group-text" for="output">Output format</label>
-            <select class="form-select" id="output">
-              <option selected value="markdown">Markdown</option>
+            <select class="form-control" id="output" name="output">
+              <option value="markdown" selected>Markdown</option>
               <option value="html">HTML</option>
               <option value="htmlcode">HTML cut-and-paste</option>
             </select>

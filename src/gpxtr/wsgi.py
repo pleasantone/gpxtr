@@ -6,6 +6,7 @@ GPXtr - Create a markdown template from a Garmin GPX file for route information
 import io
 import os
 import sys
+import html
 from datetime import datetime
 from flask import (
     Flask,
@@ -36,7 +37,7 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
 
 
-def create_table(name, markdown=False) -> str:
+def create_table(name) -> str:
     try:
         with open(name, "rt", encoding="utf-8") as stream:
             with io.StringIO() as buffer:
@@ -64,9 +65,13 @@ def create_table(name, markdown=False) -> str:
 
                 sys.stdout = real_stdout
                 buffer.flush()
-                if markdown:
-                    return "<pre>" + buffer.getvalue() + "</pre>"
-                return markdown2.markdown(buffer.getvalue(), extras=["tables"])
+                output = buffer.getvalue()
+                if request.form.get("output") == "markdown":
+                    return "<pre>" + output + "</pre>"
+                output = markdown2.markdown(output, extras=["tables"])
+                if request.form.get("output") == "htmlcode":
+                    return "<pre>" + html.escape(output) + "</pre>"
+                return output
     except gpxpy.gpx.GPXException as err:
         abort(401, f"{name}: {err}")
 
@@ -92,7 +97,7 @@ def upload_file():
             filename = secure_filename(file.filename)
             savefile = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(savefile)
-            return create_table(savefile, markdown=True)
+            return create_table(savefile)
     return render_template("upload.html", speed=DEFAULT_TRAVEL_SPEED)
 
 
