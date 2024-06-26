@@ -49,7 +49,12 @@ class _DateParser(argparse.Action):
         setattr(
             namespace,
             self.dest,
-            dateutil.parser.parse(values, default=datetime.now(dateutil.tz.tzlocal())),
+            dateutil.parser.parse(
+                values,
+                default=datetime.now(dateutil.tz.tzlocal()).replace(
+                    second=0, microsecond=0
+                ),
+            ),
         )
 
 

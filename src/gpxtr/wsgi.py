@@ -34,7 +34,10 @@ def create_table(stream) -> str:
             depart_at = request.form.get("departure")
             if depart_at:
                 table.depart_at = dateutil.parser.parse(
-                    depart_at, default=datetime.now(dateutil.tz.tzlocal())
+                    depart_at,
+                    default=datetime.now(dateutil.tz.tzlocal()).replace(
+                        second=0, microsecond=0
+                    ),
                 )
             table.ignore_times = request.form.get("ignore_times") == "on"
             table.display_coordinates = request.form.get("coordinates") == "on"
