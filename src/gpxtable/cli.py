@@ -14,7 +14,7 @@ import gpxpy.geo
 import gpxpy.utils
 import markdown2
 
-from . import GPXTableCalculator
+from gpxtable import GPXTableCalculator
 
 
 def create_markdown(args, output=None) -> None:

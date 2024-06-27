@@ -8,6 +8,7 @@ description = "Generate tables of interesting GPX route and waypoint information
 authors = [
   { name="Paul Traina", email="pleasantone@users.noreply.github.com" },
 ]
+keywords = ["GPS", "GPX", "Navigation", "Track", "Route", "Waypoints"]
 
 dynamic = ["version"]
 readme = "README.rst"
@@ -16,21 +17,31 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Operating System :: OS Independent",
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Flask",
+    "Environment :: Console",
 ]
 dependencies = [
-    "astral",
-    "gpxpy",
-    "markdown2",
-    "python-dateutil",
-    "flask"
+    "astral>=3.2",
+    "gpxpy>=1.6.2",
+    "markdown2>=2.4.13",
+    "python-dateutil>=2.9",
+
+]
+[project.optional-dependencies]
+web = [
+    "flask>=3.0.0"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/pleasantone/gpxtable"
-"Bug Tracker" = "https://github.com/pleasantone/gpxtable/issues"
+"Issues" = "https://github.com/pleasantone/gpxtable/issues"
+"Repository" = "https://github.com/pleasantone/gpxtable"
+"Documentation" = "https://gpxtable.readthedocs.io"
 
 [project.scripts]
 gpxtable = "gpxtable.cli:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "gpxtable.__version__"}
+

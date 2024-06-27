@@ -52,32 +52,34 @@ GPX files contain three types of data, waypoints, tracks, and routes.
 Tracks consist of one or several ordered lists of latitude/longitude points.
 These points on a track are typically close together but do not contain any
 information suitable for routing or contain any information about points of
-interest along a "track." Tracks were originally designed as simple "breadcrumbs"
-of where a GPS had gone, or may be used to project where it will be going.
-Tracks typically have no routing information and provide no guidance.
+interest along a "track." Tracks were originally designed as simple
+"breadcrumbs" of where a GPS had gone, or may be used to project where it will
+be going. Tracks typically have no routing information and provide no guidance.
 
 Waypoints are independent points of interest in a GPX file. They are not
-necessarily associated with tracks or routes at all, they are just pins in
-the map and have no ordering. They are not associated with any route or track.
+necessarily associated with tracks or routes at all, they are just pins in the
+map and have no ordering. They are not associated with any route or track.
 
 However, GPX routes are in some ways, the best of both tracks and waypoints.
 They consist of an ordered list of waypoints. Historically, routes originally
 just listed the points in order, and relied on the individual local GPX to
-calculate the actual path between the points. However, Garmin produced extensions
-to their routes to compute a track inside the route. This provides an ordered
-list of points of interest (waypoints) as well as hidden waypoints that shape
-the route itself as intended by the original author of the route.
+calculate the actual path between the points. However, Garmin produced
+extensions to their routes to compute a track inside the route. This provides an
+ordered list of points of interest (waypoints) as well as hidden waypoints that
+shape the route itself as intended by the original author of the route.
 
-Additionally route points may contain information like the type of point (Restaurant,
-Restroom, etc.) and one may specify a departure time or layover with each route point.
-This allows us to provide the most accurate information for a route table.
+Additionally route points may contain information like the type of point
+(Restaurant, Restroom, etc.) and one may specify a departure time or layover
+with each route point. This allows us to provide the most accurate information
+for a route table.
 
 
-Building a table from a Route (as produced by Basecamp)
--------------------------------------------------------
+ExampleL: Building a table from a Route (as produced by Basecamp)
+-----------------------------------------------------------------
 
-In this example, we have used test-data to produce the most accurate output as intended by the route author.
-The author specified delays and layovers in the route itself.
+In this example, we have used test-data to produce the most accurate output as
+intended by the route author. The author specified delays and layovers in the
+route itself.
 
 .. code-block:: console
 
@@ -92,7 +94,7 @@ The author specified delays and layovers in the route itself.
    | Peet's Coffee Northgate Mall   |       0 |   | 09:15 | Restaurant
    | Nicasio Square                 |      12 |   | 09:39 | Restroom (+0:15)
    | Pat's International            |      65 | L | 11:41 | Restaurant (+1:00)
-   | 76 Gureneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
+   | 76 Guerneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
    | Willy's America                |      79 |   | 13:23 | Scenic Area (+0:05)
    | 76 Bodega Bay                  |  67/132 | G | 15:14 | Gas Station (+0:15)
    | Point Reyes Station            |     165 |   | 16:36 | Restroom (+0:05)
@@ -103,14 +105,17 @@ The author specified delays and layovers in the route itself.
 Building a table from a track and waypoints
 -------------------------------------------
 
-In this example, we have a GPX file that only has track and waypoint information.
+In this example, we have a GPX file that only has track and waypoint
+information.
 
-In this case, we will match waypoints up with the provided tracks. Because of the limitations
-of waypoints and tracks, a "departure time" for the track should be provided and delays will
-be automatically chosen based upon the waypoint type.
+In this case, we will match waypoints up with the provided tracks. Because of
+the limitations of waypoints and tracks, a "departure time" for the track should
+be provided and delays will be automatically chosen based upon the waypoint
+type.
 
-Since the waypoints in this test file were issued in alphabetical order, not order of use,
-sort everything based upon the track_distance (distance from track start) of a waypoint.
+Since the waypoints in this test file were issued in alphabetical order, not
+order of use, sort everything based upon the track_distance (distance from track
+start) of a waypoint.
 
 .. code-block:: console
 

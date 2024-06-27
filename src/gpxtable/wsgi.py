@@ -15,8 +15,7 @@ import gpxpy.geo
 import gpxpy.utils
 import markdown2
 
-
-from . import GPXTableCalculator
+from gpxtable import GPXTableCalculator
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb

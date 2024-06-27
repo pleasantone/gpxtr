@@ -28,7 +28,7 @@ In the following example, a GPX route was produced in Garmin's Basecamp applicat
    | Peet's Coffee Northgate Mall   |       0 |   | 09:15 | Restaurant
    | Nicasio Square                 |      12 |   | 09:39 | Restroom (+0:15)
    | Pat's International            |      65 | L | 11:41 | Restaurant (+1:00)
-   | 76 Gureneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
+   | 76 Guerneville                 |   65/65 | G | 12:41 | Gas Station (+0:15)
    | Willy's America                |      79 |   | 13:23 | Scenic Area (+0:05)
    | 76 Bodega Bay                  |  67/132 | G | 15:14 | Gas Station (+0:15)
    | Point Reyes Station            |     165 |   | 16:36 | Restroom (+0:05)

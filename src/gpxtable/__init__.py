@@ -3,5 +3,7 @@ gpxtable - Create a markdown template from a Garmin GPX file for route informati
 """
 
 __version__ = "1.0.1"
+__all__ = ["GPXTableCalculator"]
+__author__ = "Paul Traina"
 
 from .gpxtable import GPXTableCalculator

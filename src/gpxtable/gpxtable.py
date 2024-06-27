@@ -1,6 +1,6 @@
 # pylint: disable=line-too-long, missing-function-docstring
 """
-gpxtableble - Create a markdown template from a Garmin GPX file for route information
+gpxtable - Create a markdown template from a Garmin GPX file for route information
 """
 
 import math
@@ -433,6 +433,7 @@ class GPXTableCalculator:
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
             timing = self._departure_time(route.points[0], True)
+            delay = timedelta()
             if timing:
                 route.points[0].time = timing
             last_display_distance = 0.0

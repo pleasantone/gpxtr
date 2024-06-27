@@ -20,13 +20,20 @@
             "justMyCode": true,
         },
         {
-            "name": "Python Debugger: CLI",
+            "name": "Python Debugger: CLI (Basecamp)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtable/cli.py",
             "console": "integratedTerminal",
-            "xargs": ["--depart", "06/15/2024 09:15:00am", "--ignore", "/Users/pst/gpxtable/testdata/scenic2.gpx"],
-            "args": ["--depart", "07/27/2023 09:15:00am", "/Users/pst/gpxtable/testdata/basecamp.gpx"]
+            "args": ["--depart", "07/27/2023 09:15:00am", "${workspaceFolder}/testdata/basecamp.gpx"]
+        },
+        {
+            "name": "Python Debugger: CLI (Scenic)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/gpxtable/cli.py",
+            "console": "integratedTerminal",
+            "args": ["--depart", "06/15/2024 09:15:00am", "--ignore", "${workspaceFolder}/testdata/scenic2.gpx"]
         }
     ]
 }
