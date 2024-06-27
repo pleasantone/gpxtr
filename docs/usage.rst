@@ -15,7 +15,7 @@ in the GitHub repository.
 
 .. code-block:: console
 
-   $ python3 -m pip install https://github.com/pleasantone/gpxtable/
+   $ python3 -m pip install gpxtable
 
 Using gpxtable
 --------------
