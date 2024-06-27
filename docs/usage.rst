@@ -18,7 +18,7 @@ in the GitHub repository.
    $ python3 -m pip install https://github.com/pleasantone/gpxtable/
 
 Using gpxtable
------------
+--------------
 
 Once installed, you should be able to invoke it as *gpxtable*.
 
