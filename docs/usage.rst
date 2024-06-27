@@ -6,7 +6,7 @@ Usage
 Installation
 ------------
 
-To use GPXtr, first install it using pip. We require a recent python (tested with python 3.9+).
+To use gpxtable, first install it using pip. We require a recent python (tested with python 3.9+).
 
 Consider using `Python virtual environments`_ to avoid dependency conflicts.
 
@@ -15,17 +15,17 @@ in the GitHub repository.
 
 .. code-block:: console
 
-   $ python3 -m pip install https://github.com/pleasantone/gpxtr/
+   $ python3 -m pip install https://github.com/pleasantone/gpxtable/
 
-Using gpxtr
+Using gpxtable
 -----------
 
-Once installed, you should be able to invoke it as *gpxtr*.
+Once installed, you should be able to invoke it as *gpxtable*.
 
 .. code-block:: console
 
-   $ gpxtr --help
-   usage: gpxtr [-h] [--departure DEPARTURE] [--ignore-times] [--speed SPEED]
+   $ gpxtable --help
+   usage: gpxtable [-h] [--departure DEPARTURE] [--ignore-times] [--speed SPEED]
              [--html] [--metric] [--coordinates]
              input [input ...]
 
@@ -81,7 +81,7 @@ The author specified delays and layovers in the route itself.
 
 .. code-block:: console
 
-   $ gpxtr testdata/basecamp-route.gpx
+   $ gpxtable testdata/basecamp-route.gpx
    * Garmin Desktop App
    * Default speed: 30.00 mph
 
@@ -114,7 +114,7 @@ sort everything based upon the track_distance (distance from track start) of a w
 
 .. code-block:: console
 
-   ❯ gpxtr --departure "07/30/2022 09:15:00" testdata/basecamp-tracks.gpx
+   ❯ gpxtable --departure "07/30/2022 09:15:00" testdata/basecamp-tracks.gpx
    * Garmin Desktop App
    * Departure at Sat Jul 30 09:15:00 2022
    * Total distance: 196 mi

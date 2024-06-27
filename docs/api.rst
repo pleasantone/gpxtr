@@ -1,5 +1,5 @@
 API
 ===
 
-.. autoclass:: gpxtr.GPXTableCalculator
+.. autoclass:: gpxtable.GPXTableCalculator
    :members:

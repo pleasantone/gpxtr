@@ -7,7 +7,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "GPXtr"
+project = "gpxtable"
 copyright = "2023-2024, Paul Traina"
 author = "Paul Traina"
 

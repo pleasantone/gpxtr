@@ -1,6 +1,6 @@
 # pylint: disable=line-too-long, missing-function-docstring
 """
-GPXtr - Create a markdown template from a Garmin GPX file for route information
+gpxtableble - Create a markdown template from a Garmin GPX file for route information
 """
 
 import math

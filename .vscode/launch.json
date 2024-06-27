@@ -11,7 +11,7 @@
             "module": "flask",
             "env": {
                 "FLASK_DEBUG": "1",
-                "FLASK_APP": "${workspaceFolder}/src/gpxtr/wsgi.py"
+                "FLASK_APP": "${workspaceFolder}/src/gpxtable/wsgi.py"
             },
             "args": [
                 "run", "--no-debugger", "--no-reload"
@@ -23,10 +23,10 @@
             "name": "Python Debugger: CLI",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/gpxtr/cli.py",
+            "program": "${workspaceFolder}/src/gpxtable/cli.py",
             "console": "integratedTerminal",
-            "xargs": ["--depart", "06/15/2024 09:15:00am", "--ignore", "/Users/pst/gpxtr/testdata/scenic2.gpx"],
-            "args": ["--depart", "07/27/2023 09:15:00am", "/Users/pst/gpxtr/testdata/basecamp.gpx"]
+            "xargs": ["--depart", "06/15/2024 09:15:00am", "--ignore", "/Users/pst/gpxtable/testdata/scenic2.gpx"],
+            "args": ["--depart", "07/27/2023 09:15:00am", "/Users/pst/gpxtable/testdata/basecamp.gpx"]
         }
     ]
 }
