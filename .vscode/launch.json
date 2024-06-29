@@ -25,7 +25,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtable/cli.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "07/27/2023 09:15:00am", "${workspaceFolder}/testdata/basecamp.gpx"]
+            "args": ["--depart", "07/27/2023 09:15:00am", "${workspaceFolder}/samples/basecamp.gpx"]
         },
         {
             "name": "Python Debugger: CLI (Scenic)",
@@ -33,7 +33,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtable/cli.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "06/15/2024 09:15:00am", "--ignore", "${workspaceFolder}/testdata/scenic2.gpx"]
+            "args": ["--depart", "06/15/2024 09:15:00am", "--ignore", "${workspaceFolder}/samples/scenic2.gpx"]
         }
     ]
 }

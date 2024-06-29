@@ -15,7 +15,7 @@ In the following example, a GPX route was produced in Garmin's Basecamp applicat
 
 .. code-block:: console
 
-   $ gpxtable testdata/basecamp-route.gpx
+   $ gpxtable samples/basecamp-route.gpx
    * Garmin Desktop App
    * Default speed: 30.00 mph
 

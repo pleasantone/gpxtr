@@ -83,7 +83,7 @@ route itself.
 
 .. code-block:: console
 
-   $ gpxtable testdata/basecamp-route.gpx
+   $ gpxtable samples/basecamp-route.gpx
    * Garmin Desktop App
    * Default speed: 30.00 mph
 
@@ -119,7 +119,7 @@ start) of a waypoint.
 
 .. code-block:: console
 
-   ❯ gpxtable --departure "07/30/2022 09:15:00" testdata/basecamp-tracks.gpx
+   ❯ gpxtable --departure "07/30/2022 09:15:00" samples/basecamp-tracks.gpx
    * Garmin Desktop App
    * Departure at Sat Jul 30 09:15:00 2022
    * Total distance: 196 mi
