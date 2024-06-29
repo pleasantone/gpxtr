@@ -30,7 +30,8 @@
         "toctree",
         "tzlocal",
         "venv",
-        "werkzeug"
+        "werkzeug",
+        "wsgi"
     ],
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter",
