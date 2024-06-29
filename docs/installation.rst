@@ -35,8 +35,8 @@ Windows
     pip install gpxtable[web]
 
 
-Also included in the package is an optional web service component using `wsgi_`.
+Also included in the package is an optional web service component using `wsgi`_.
 If you are comfortable with WSGI services and wish to play with this service,
 substitute `gpxtable` above with `"gpxtable[web]"` when installing with PIP.
 
-.. `wsgi`: https://wsgi.readthedocs.io/en/latest/learn.html
+.. _`wsgi`: https://wsgi.readthedocs.io/en/latest/learn.html
