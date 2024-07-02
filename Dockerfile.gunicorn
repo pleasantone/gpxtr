@@ -1,0 +1,10 @@
+FROM python:3-slim
+EXPOSE 8000:8000
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir gunicorn
+RUN pip install --no-cache-dir ".[web]"
+# so templates are found
+WORKDIR /app/src/gpxtable
+CMD [ "gunicorn", "-b", ":8000", "wsgi:app"]
+

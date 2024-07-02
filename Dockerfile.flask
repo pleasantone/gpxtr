@@ -1,0 +1,10 @@
+FROM python:3-slim
+EXPOSE 8000:8000
+STOPSIGNAL SIGINT
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir ".[web]"
+WORKDIR /app/src/gpxtable
+ENV FLASK_APP="src/gpxtable/wsgi.py"
+CMD [ "python", "-m", "flask", "run", "--host", "0.0.0.0", "--port", "8000" ]
+
