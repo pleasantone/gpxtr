@@ -198,8 +198,8 @@ class GPXTableCalculator:
     #: 200m allowed between waypoint and start/end of track
     waypoint_delta = 200.0
 
-    #: 2km between duplicates of the same waypoint on a track
-    waypoint_debounce = 2000.0
+    #: 10km between duplicates of the same waypoint on a track
+    waypoint_debounce = 10000.0
 
     #: Assume traveling at 30mph/50kph
     default_travel_speed = 30.0 / KM_TO_MILES
