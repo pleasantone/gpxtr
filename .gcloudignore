@@ -6,25 +6,27 @@
 # For more information, run:
 #   $ gcloud topic gcloudignore
 #
+.coverage/
 .gcloudignore
-# If you would like to upload your .git directory, .gitignore file or files
-# from your .gitignore file, remove the corresponding line
-# below:
 .git
 .github
 .gitignore
 .pytest_cache
 .readthedocs.yaml
+.ruff_cache/
 .venv/
 .vscode/
 .whitesource
+CHANGELOG.md
 Docker.*
 LICENSE
 README.rst
 build/
 dist/
 docs/
+junit/
 samples/
+tests/
 
 # Python pycache:
 __pycache__/
