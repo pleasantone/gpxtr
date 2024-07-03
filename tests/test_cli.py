@@ -1,12 +1,24 @@
 import pytest
 import subprocess
 import os
+from unittest import mock
 
 # Define the paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLI_SCRIPT_PATH = os.path.join(BASE_DIR, "src", "gpxtable", "cli.py")
 GPX_FILE_PATH = os.path.join(BASE_DIR, "samples", "basecamp.gpx")
 GPX_OUTPUT_PATH = os.path.join(BASE_DIR, "samples", "basecamp.md")
+
+
+@pytest.fixture()
+def setenvvar(monkeypatch):
+    with mock.patch.dict(os.environ, clear=True):
+        envvars = {
+            "TZ": "America/Los_Angeles",
+        }
+        for k, v in envvars.items():
+            monkeypatch.setenv(k, v)
+        yield  # This is the magical bit which restore the environment after
 
 
 @pytest.fixture
