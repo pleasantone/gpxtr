@@ -1,2 +1,4 @@
 runtime: python312
 entrypoint: gunicorn -b :$PORT --chdir src/gpxtable wsgi:app
+env_variables:
+  TZ: "America/Los_Angeles"
