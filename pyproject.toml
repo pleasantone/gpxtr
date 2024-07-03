@@ -45,3 +45,5 @@ gpxtable = "gpxtable.cli:main"
 [tool.setuptools.dynamic]
 version = {attr = "gpxtable.__version__"}
 
+[tool.setuptools.package-data]
+gpxtable = ["static/*", "templates/*"]
