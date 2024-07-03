@@ -72,3 +72,8 @@ def upload_file():
             return redirect(request.url)
         return create_table(file)
     return render_template("upload.html")
+
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
