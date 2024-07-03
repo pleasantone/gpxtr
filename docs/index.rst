@@ -47,6 +47,7 @@ as well as several other routing applications.
    :maxdepth: 2
    :caption: Contents:
 
+   distribution
    installation
    usage
    api
