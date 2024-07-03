@@ -36,6 +36,10 @@ gunicorn = [
     "flask>=3.0.0",
     "gunicorn"
 ]
+tests = [
+    "pytest",
+    "pytest-cov"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/pleasantone/gpxtable"

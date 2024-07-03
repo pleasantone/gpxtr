@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Unit tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "unittest",
+            "args": "${workspaceFolder}/tests/test_gpxtable.py",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python Debugger: Flask",
             "type": "debugpy",
             "request": "launch",
@@ -14,7 +22,9 @@
                 "FLASK_APP": "${workspaceFolder}/src/gpxtable/wsgi.py"
             },
             "args": [
-                "run", "--no-debugger", "--no-reload"
+                "run",
+                "--no-debugger",
+                "--no-reload"
             ],
             "jinja": true,
             "justMyCode": true,
@@ -25,7 +35,11 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtable/cli.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "07/27/2023 09:15:00am", "${workspaceFolder}/samples/basecamp.gpx"]
+            "args": [
+                "--depart",
+                "07/27/2023 09:15:00am",
+                "${workspaceFolder}/samples/basecamp.gpx"
+            ]
         },
         {
             "name": "Python Debugger: CLI (Scenic)",
@@ -33,7 +47,12 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/gpxtable/cli.py",
             "console": "integratedTerminal",
-            "args": ["--depart", "06/15/2024 09:15:00am", "--ignore", "${workspaceFolder}/samples/scenic2.gpx"]
+            "args": [
+                "--depart",
+                "06/15/2024 09:15:00am",
+                "--ignore",
+                "${workspaceFolder}/samples/scenic2.gpx"
+            ]
         }
     ]
 }
