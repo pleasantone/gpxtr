@@ -17,13 +17,13 @@ import markdown2
 from gpxtable import GPXTableCalculator
 
 
-def create_markdown(args, output=None) -> None:
+def create_markdown(args, file=None) -> None:
     for handle in args.input:
         with handle as stream:
             try:
                 GPXTableCalculator(
                     gpxpy.parse(stream),
-                    output=output,
+                    output=file,
                     imperial=not args.metric,
                     speed=args.speed,
                     depart_at=args.departure,
@@ -60,6 +60,7 @@ def main() -> None:
     parser.add_argument(
         "input", nargs="+", type=argparse.FileType("r"), help="input file(s)"
     )
+    parser.add_argument("-o", "--output", type=str, help="The path to the output file")
     parser.add_argument(
         "--departure",
         default=None,
@@ -89,13 +90,20 @@ def main() -> None:
     except ValueError as err:
         raise SystemExit(err) from err
 
+    output = None
+    if args.output:
+        output = open(args.output, "w")
+
     if args.html:
         with io.StringIO() as buffer:
-            create_markdown(args, output=buffer)
+            create_markdown(args, file=buffer)
             buffer.flush()
-            print(markdown2.markdown(buffer.getvalue(), extras=["tables"]))
+            print(markdown2.markdown(buffer.getvalue(), extras=["tables"]), file=output)
     else:
-        create_markdown(args)
+        create_markdown(args, file=output)
+
+    if output:
+        output.close()
 
 
 if __name__ == "__main__":
