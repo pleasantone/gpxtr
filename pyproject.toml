@@ -32,6 +32,10 @@ dependencies = [
 web = [
     "flask>=3.0.0"
 ]
+gunicorn = [
+    "flask>=3.0.0",
+    "gunicorn"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/pleasantone/gpxtable"
