@@ -429,6 +429,8 @@ class GPXTableCalculator:
                 print(f"* {route.description}", file=self.output)
 
             print(self._format_output_header(), file=self.output)
+            if not route.points:
+                continue
             dist = 0.0
             previous = route.points[0].latitude, route.points[0].longitude
             last_gas = 0.0
