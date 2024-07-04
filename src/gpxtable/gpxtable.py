@@ -5,7 +5,7 @@ gpxtable - Create a markdown template from a Garmin GPX file for route informati
 
 import math
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import Optional, Union, List, NamedTuple, TextIO
 
 import astral
@@ -235,7 +235,7 @@ class GPXTableCalculator:
         depart_at: Optional[datetime] = None,
         ignore_times: bool = False,
         display_coordinates: bool = False,
-        tz=None,
+        tz: Optional[tzinfo] = None,
     ) -> None:
         self.gpx = gpx
         self.output = output
