@@ -1,6 +1,7 @@
 import unittest
 import gpxpy
 import gpxpy.gpx
+import gpxpy.geo
 from datetime import datetime, timezone
 from io import StringIO
 from gpxtable.gpxtable import GPXTableCalculator, GPXTrackExt
