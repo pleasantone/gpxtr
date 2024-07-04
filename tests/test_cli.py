@@ -24,11 +24,14 @@ def setenvvar(monkeypatch):
 @pytest.fixture
 def run_cli(tmpdir):
     def _run_cli(args):
+        my_env = os.environ.copy()
+        my_env["TZ"] = "America/Los_Angeles"
         result = subprocess.run(
             ["python", CLI_SCRIPT_PATH] + args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            env=my_env,
         )
         return result
 
