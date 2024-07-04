@@ -1,3 +1,4 @@
+from _pytest._py.path import LocalPath
 import pytest
 import subprocess
 import os
@@ -6,12 +7,10 @@ from unittest import mock
 # Define the paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLI_SCRIPT_PATH = os.path.join(BASE_DIR, "src", "gpxtable", "cli.py")
-GPX_FILE_PATH = os.path.join(BASE_DIR, "samples", "basecamp.gpx")
-GPX_OUTPUT_PATH = os.path.join(BASE_DIR, "samples", "basecamp.md")
 
 
 @pytest.fixture
-def set_environment_variables(monkeypatch):
+def set_environment_variables(monkeypatch: pytest.MonkeyPatch):
     env_vars = {
         "TZ": "America/Los_Angeles",
     }
@@ -21,20 +20,21 @@ def set_environment_variables(monkeypatch):
         yield  # This is the magical bit which restore the environment after
 
 
-@pytest.fixture
-def run_cli(tmpdir):
-    def _run_cli(args):
-        env = os.environ.copy()
-        env["TZ"] = "America/Los_Angeles"
-        result = subprocess.run(
-            ["python", CLI_SCRIPT_PATH] + args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-        )
-        return result
+def _run_cli(args):
+    env = os.environ.copy()
+    env["TZ"] = "America/Los_Angeles"
+    result = subprocess.run(
+        ["python", CLI_SCRIPT_PATH] + args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    return result
 
+
+@pytest.fixture
+def run_cli():
     return _run_cli
 
 
@@ -44,24 +44,21 @@ def test_cli_help(run_cli):
     assert "usage:" in result.stdout
 
 
-def test_cli_output(run_cli, tmpdir):
-    output_file = tmpdir.join("output.md")
-    result = run_cli(
-        ["-o", str(output_file), "--depart", "07/30/2023 09:15:00", GPX_FILE_PATH]
-    )
-    assert result.returncode == 0
-    with open(GPX_OUTPUT_PATH, "r") as f:
-        expected_output = f.read()
-    with open(output_file, "r") as f:
-        actual_output = f.read()
-    assert actual_output == expected_output
+file_test_cases = [
+    ("basecamp", ["--depart", "07/30/2023 09:15:00"]),
+    ("scenic2", ["--depart", "07/30/2023 09:15:00"]),
+]
 
 
-def test_cli_basecamp(run_cli):
-    with open(GPX_OUTPUT_PATH, "r") as f:
-        expected_output = f.read()
-    result = run_cli(["--depart", "07/30/2023 09:15:00", GPX_FILE_PATH])
+@pytest.mark.parametrize("test_case,arguments", file_test_cases)
+def test_cli_files_parm(test_case: str, arguments: list):
+    input_file = os.path.join(BASE_DIR, "samples", test_case + ".gpx")
+    expected_file = os.path.join(BASE_DIR, "samples", test_case + ".md")
+    args = arguments + [input_file]
+    result = _run_cli(args)
     assert result.returncode == 0
+    with open(expected_file, "r") as f:
+        expected_output = f.read()
     assert result.stdout == expected_output
 
 
