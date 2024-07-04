@@ -5,6 +5,7 @@ gpxtable - Create a markdown template from a Garmin GPX file for route informati
 
 import io
 import html
+import secrets
 from datetime import datetime
 from flask import Flask, request, flash, redirect, render_template, abort
 
@@ -19,6 +20,7 @@ from gpxtable import GPXTableCalculator
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
+app.config["SECRET_KEY"] = secrets.token_urlsafe(16)
 
 
 def create_table(stream, tz=None) -> str:
