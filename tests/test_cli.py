@@ -10,28 +10,28 @@ GPX_FILE_PATH = os.path.join(BASE_DIR, "samples", "basecamp.gpx")
 GPX_OUTPUT_PATH = os.path.join(BASE_DIR, "samples", "basecamp.md")
 
 
-@pytest.fixture()
-def setenvvar(monkeypatch):
-    with mock.patch.dict(os.environ, clear=True):
-        envvars = {
-            "TZ": "America/Los_Angeles",
-        }
-        for k, v in envvars.items():
-            monkeypatch.setenv(k, v)
+@pytest.fixture
+def set_environment_variables(monkeypatch):
+    env_vars = {
+        "TZ": "America/Los_Angeles",
+    }
+    with mock.patch.dict(os.environ, env_vars, clear=True):
+        for key, value in env_vars.items():
+            monkeypatch.setenv(key, value)
         yield  # This is the magical bit which restore the environment after
 
 
 @pytest.fixture
 def run_cli(tmpdir):
     def _run_cli(args):
-        my_env = os.environ.copy()
-        my_env["TZ"] = "America/Los_Angeles"
+        env = os.environ.copy()
+        env["TZ"] = "America/Los_Angeles"
         result = subprocess.run(
             ["python", CLI_SCRIPT_PATH] + args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            env=my_env,
+            env=env,
         )
         return result
 
