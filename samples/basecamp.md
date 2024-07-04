@@ -1,5 +1,5 @@
 * Garmin Desktop App
-* Departure at Sun Jul 30 09:15:00 2023
+* Departure at Sun Jul 30 09:15:00 2023 PDT
 * Total distance: 196 mi
 * Default speed: 30.00 mph
 

@@ -235,6 +235,7 @@ class GPXTableCalculator:
         depart_at: Optional[datetime] = None,
         ignore_times: bool = False,
         display_coordinates: bool = False,
+        tz=None,
     ) -> None:
         self.gpx = gpx
         self.output = output
@@ -245,6 +246,7 @@ class GPXTableCalculator:
         self.depart_at: Optional[datetime] = depart_at
         self.ignore_times: bool = ignore_times
         self.display_coordinates: bool = display_coordinates
+        self.tz = tz
 
     def print_all(self) -> None:
         """
@@ -264,7 +266,7 @@ class GPXTableCalculator:
         if self.gpx.creator:
             print(f"* {self.gpx.creator}", file=self.output)
         if self.depart_at:
-            print(f"* Departure at {self.depart_at:%c}", file=self.output)
+            print(f"* Departure at {self.depart_at:%c %Z}", file=self.output)
         move_data = self.gpx.get_moving_data()
         if move_data and move_data.moving_time:
             print(
@@ -336,7 +338,7 @@ class GPXTableCalculator:
                 ),
                 (
                     (track_point.location.time + waypoint_delays)
-                    .astimezone()
+                    .astimezone(self.tz)
                     .strftime("%H:%M")
                     if track_point.location.time
                     else ""
@@ -418,7 +420,7 @@ class GPXTableCalculator:
                     if point not in [route.points[0], route.points[-1]]
                     else ""
                 ),
-                timing.astimezone().strftime("%H:%M") if timing else "",
+                timing.astimezone(self.tz).strftime("%H:%M") if timing else "",
                 point.symbol or "",
                 f" (+{str(delay)[:-3]})" if delay else "",
             )
@@ -612,12 +614,12 @@ class GPXTableCalculator:
             "Ends": end.time + (delay or timedelta()),
         }
         first = True
-        retval = f"{start.time.astimezone():%x}: "
+        retval = f"{start.time.astimezone(self.tz):%x}: "
         for name, time in sorted(times.items(), key=lambda kv: kv[1]):
             if first is not True:
                 retval += ", "
             first = False
-            retval += f"{name}: {time.astimezone():%H:%M}"
+            retval += f"{name}: {time.astimezone(self.tz):%H:%M}"
         return retval
 
     @staticmethod

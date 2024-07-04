@@ -18,6 +18,11 @@ from gpxtable import GPXTableCalculator
 
 
 def create_markdown(args, file=None) -> None:
+    tz = None
+    if args.timezone:
+        tz = dateutil.tz.gettz(args.timezone)
+        if not tz:
+            raise SystemExit(f"{args.timezone}: invalid timezone")
     for handle in args.input:
         with handle as stream:
             try:
@@ -29,6 +34,7 @@ def create_markdown(args, file=None) -> None:
                     depart_at=args.departure,
                     display_coordinates=args.coordinates,
                     ignore_times=args.ignore_times,
+                    tz=tz,
                 ).print_all()
             except gpxpy.gpx.GPXException as err:
                 raise SystemExit(f"{handle.name}: {err}") from err
@@ -49,7 +55,7 @@ class _DateParser(argparse.Action):
             dateutil.parser.parse(
                 values,
                 default=datetime.now(dateutil.tz.tzlocal()).replace(
-                    second=0, microsecond=0
+                    minute=0, second=0, microsecond=0
                 ),
             ),
         )
@@ -84,6 +90,7 @@ def main() -> None:
         action="store_true",
         help="Display latitude and longitude of waypoints",
     )
+    parser.add_argument("--timezone", type=str, help="Override timezone")
 
     try:
         args = parser.parse_args()

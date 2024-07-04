@@ -21,17 +21,17 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
 
 
-def create_table(stream) -> str:
+def create_table(stream, tz=None) -> str:
     try:
 
         depart_at = None
         departure = request.form.get("departure")
+        if not tz:
+            tz = dateutil.tz.tzlocal()
         if departure:
             depart_at = dateutil.parser.parse(
                 departure,
-                default=datetime.now(dateutil.tz.tzlocal()).replace(
-                    second=0, microsecond=0
-                ),
+                default=datetime.now(tz).replace(minute=0, second=0, microsecond=0),
             )
 
         with io.StringIO() as buffer:
@@ -43,6 +43,7 @@ def create_table(stream) -> str:
                 display_coordinates=request.form.get("coordinates") == "on",
                 imperial=request.form.get("metric") != "on",
                 speed=float(request.form.get("speed") or 0.0),
+                tz=tz,
             ).print_all()
 
             buffer.flush()
@@ -70,7 +71,14 @@ def upload_file():
         if file.filename == "":
             flash("No selected file")
             return redirect(request.url)
-        return create_table(file)
+        tz = None
+        timezone = request.form.get("tz")
+        if timezone:
+            tz = dateutil.tz.gettz(timezone)
+            if not tz:
+                flash("Invalid timezone")
+                return redirect(request.url)
+        return create_table(file, tz=tz)
     return render_template("upload.html")
 
 
