@@ -192,7 +192,12 @@ class GPXTrackExt(GPXTrack):
 
 
 class GPXPointMixin:
-    point_types = [
+    """
+    Mixin for GPXWaypoint and GPXRoutePoint to extend functionality
+    """
+
+    #: Class variable point_types may be overriden or extended.
+    point_types: list[dict] = [
         (
             "Gas/Restaurant",
             {
@@ -273,7 +278,7 @@ class GPXPointMixin:
         return timedelta(minutes=values.get("delay", 0))
 
     def marker(self) -> str:
-        """Single character marker for a given waypoint"""
+        """Single or dual character marker for a given waypoint e.g. G, L, GL"""
         symbol, values = self._classify()
         return values.get("marker", "")
 
