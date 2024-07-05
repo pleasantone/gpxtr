@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/pleasantone/gpxtable/compare/v1.1.0...v1.2.0) (2024-07-05)
+
+
+### Features
+
+* add timezone support ([86d4930](https://github.com/pleasantone/gpxtable/commit/86d49306612e1a05cfe55c0364b453a38fbb13ff))
+* simplify and extend points and support gas/lunch ([146c66c](https://github.com/pleasantone/gpxtable/commit/146c66c5d783d2822e14578cb26fadcb24394e70))
+
+
+### Bug Fixes
+
+* **wsgi:** clean up errors ([70c2500](https://github.com/pleasantone/gpxtable/commit/70c2500acbc97f43bbe196374d9f2a77140e13db))
+* **wsgi:** message flashing ([09c23f2](https://github.com/pleasantone/gpxtable/commit/09c23f2c9579e0a313e65743d280163ebc1453b5))
+
 ## [1.1.0](https://github.com/pleasantone/gpxtable/compare/v1.0.4...v1.1.0) (2024-07-03)
 
 
