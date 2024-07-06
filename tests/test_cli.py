@@ -1,4 +1,5 @@
 from _pytest._py.path import LocalPath
+import argparse
 import pytest
 import subprocess
 import os
@@ -44,6 +45,12 @@ def test_cli_help(run_cli):
     assert "usage:" in result.stdout
 
 
+def test_cli_invalid_file(run_cli):
+    result = run_cli(["non_existent_file.gpx"])
+    assert result.returncode != 0
+    assert "Errno" in result.stderr
+
+
 file_test_cases = [
     ("basecamp", ["--depart", "07/30/2023 09:15:00"]),
     ("scenic2", ["--depart", "07/30/2023 09:15:00"]),
@@ -51,10 +58,16 @@ file_test_cases = [
 ]
 
 
+def input_output_names(filename: str):
+    return (
+        os.path.join(BASE_DIR, "samples", filename + ".gpx"),
+        os.path.join(BASE_DIR, "samples", filename + ".md"),
+    )
+
+
 @pytest.mark.parametrize("test_case,arguments", file_test_cases)
 def test_cli_files_parm(test_case: str, arguments: list):
-    input_file = os.path.join(BASE_DIR, "samples", test_case + ".gpx")
-    expected_file = os.path.join(BASE_DIR, "samples", test_case + ".md")
+    input_file, expected_file = input_output_names(test_case)
     args = arguments + [input_file]
     result = _run_cli(args)
     assert result.returncode == 0
@@ -63,11 +76,28 @@ def test_cli_files_parm(test_case: str, arguments: list):
     assert result.stdout == expected_output
 
 
-def test_cli_invalid_file(run_cli):
-    result = run_cli(["non_existent_file.gpx"])
-    assert result.returncode != 0
-    assert "Errno" in result.stderr
+def generate_sample_output() -> None:
+    for test_case, arguments in file_test_cases:
+        input_file, output_file = input_output_names(test_case)
+        args = arguments + [input_file]
+        print(f"gpxtable {' '.join(args)} > {output_file}...")
+        result = _run_cli(args)
+        assert result.returncode == 0
+        with open(output_file, "w") as f:
+            f.write(result.stdout)
 
 
 if __name__ == "__main__":
-    pytest.main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--generate", action="store_true", help="generate expected output files"
+    )
+    try:
+        args = parser.parse_args()
+    except ValueError as err:
+        raise SystemExit(err) from err
+
+    if args.generate:
+        generate_sample_output()
+    else:
+        pytest.main()
