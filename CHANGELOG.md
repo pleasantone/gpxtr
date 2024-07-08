@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1](https://github.com/pleasantone/gpxtable/compare/v1.2.0...v1.2.1) (2024-07-08)
+
+
+### Bug Fixes
+
+* typing for point_types ([d48ceef](https://github.com/pleasantone/gpxtable/commit/d48ceefdd1c1351aab4c536c478cc0019e663e07))
+
+
+### Documentation
+
+* document point_types ([985b1f5](https://github.com/pleasantone/gpxtable/commit/985b1f5543ce6f34d643096ea26a9181e7d9bc8b))
+
 ## [1.2.0](https://github.com/pleasantone/gpxtable/compare/v1.1.0...v1.2.0) (2024-07-05)
 
 
