@@ -8,7 +8,7 @@
             "name": "Python Debugger: Unit tests",
             "type": "debugpy",
             "request": "launch",
-            "module": "unittest",
+            "module": "pytest",
             "args": "${workspaceFolder}/tests/test_gpxtable.py",
             "console": "integratedTerminal"
         },
