@@ -196,8 +196,8 @@ class GPXPointMixin:
     Mixin for GPXWaypoint and GPXRoutePoint to extend functionality
     """
 
-    #: Class variable point_types may be overriden or extended.
-    point_types: list[dict] = [
+    #: Class variable point_types may be overridden or extended.
+    point_types: list[tuple[str, dict]] = [
         (
             "Gas/Restaurant",
             {
@@ -285,7 +285,7 @@ class GPXPointMixin:
     def fuel_stop(self) -> bool:
         """Is this a fuel stop, should we reset?"""
         symbol, values = self._classify()
-        return symbol and symbol.startswith("Gas")
+        return bool(symbol and symbol.startswith("Gas"))
 
     def shaping_point(self) -> bool:
         """:return: True if route point is a shaping/Via point"""
