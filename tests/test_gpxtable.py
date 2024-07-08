@@ -79,7 +79,15 @@ def test_print_header(gpx_data: Tuple[GPX, StringIO]) -> None:
     gpx, output = gpx_data
     calculator = GPXTableCalculator(gpx, output)
     calculator.print_header()
-    assert "##" in output.getvalue()
+    assert (
+        output.getvalue()
+        == """## Unit Test GPX Name
+* Unit Test Creator
+* Total moving time: 01:00:00
+* Total distance: 5 mi
+* Default speed: 48.28 mph
+"""
+    )
 
 
 def test_print_waypoints(gpx_data: Tuple[GPX, StringIO]) -> None:
@@ -94,6 +102,18 @@ def test_print_routes(gpx_data: Tuple[GPX, StringIO]) -> None:
     calculator = GPXTableCalculator(gpx, output)
     calculator.print_routes()
     assert "## Route:" in output.getvalue()
+    assert (
+        """
+## Route: Unit Test Route Name
+* Unit Test Route Description
+
+| Name                           |   Dist. | GL |  ETA  | Notes
+| :----------------------------- | ------: | -- | ----: | :----
+| Route Start                    |       0 |    |       | Circle, Green
+| Route End                      |     0/0 |    |       | Circle, Blue
+"""
+        in output.getvalue()
+    )
 
 
 def test_get_points_data(gpx_data: Tuple[GPX, StringIO]) -> None:
