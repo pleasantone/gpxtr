@@ -26,19 +26,21 @@ dependencies = [
     "gpxpy>=1.6.2",
     "markdown2>=2.4.13",
     "python-dateutil>=2.9",
-
 ]
 [project.optional-dependencies]
 web = [
-    "flask>=3.0.0"
+    "flask>=3.0.0",
+    "validators>=0.32"
 ]
 gunicorn = [
     "flask>=3.0.0",
-    "gunicorn"
+    "gunicorn",
+    "validators>=0.32"
 ]
 tests = [
     "pytest",
-    "pytest-cov"
+    "pytest-cov",
+    "pytest-flask"
 ]
 
 [project.urls]

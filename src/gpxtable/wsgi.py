@@ -5,9 +5,10 @@ gpxtable - Create a markdown template from a Garmin GPX file for route informati
 
 import io
 import html
+import requests
 import secrets
 from datetime import datetime
-from flask import Flask, request, flash, redirect, render_template, abort
+from flask import Flask, request, flash, redirect, render_template, abort, url_for
 
 import dateutil.parser
 import dateutil.tz
@@ -15,6 +16,7 @@ import gpxpy.gpx
 import gpxpy.geo
 import gpxpy.utils
 import markdown2
+import validators
 
 from gpxtable import GPXTableCalculator
 
@@ -63,23 +65,37 @@ def create_table(stream, tz=None) -> str:
 @app.route("/", methods=["GET", "POST"])
 def upload_file():
     if request.method == "POST":
-        # check if the post request has the file part
-        if "file" not in request.files:
-            flash("No file part in form")
-            return redirect(request.url)
-        file = request.files["file"]
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == "":
-            flash("No file selected")
-            return redirect(request.url)
+        if "url" not in request.form and "file" not in request.files:
+            flash("Missing URL for GPX file or uploaded file.")
+            return redirect(url_for("upload_file"))
+
+        if "url" in request.form and (url := request.form.get("url")):
+            if not validators.url(url):
+                flash("Invalid URL")
+                return redirect(url_for("upload_file"))
+            response = requests.get(url)
+            if response.status_code == 200:
+                file = io.BytesIO(response.content)
+            else:
+                flash(
+                    "Error fetching the GPX file from the provided URL: {response.reason}"
+                )
+                return redirect(url_for("upload_file"))
+        elif "file" in request.files:
+            file = request.files["file"]
+            # If the user does not select a file, the browser submits an
+            # empty file without a filename.
+            if not file.filename:
+                flash("No file selected")
+                return redirect(url_for("upload_file"))
+
         tz = None
         timezone = request.form.get("tz")
         if timezone:
             tz = dateutil.tz.gettz(timezone)
             if not tz:
                 flash("Invalid timezone")
-                return redirect(request.url)
+                return redirect(url_for("upload_file"))
         return create_table(file, tz=tz)
     return render_template("upload.html")
 

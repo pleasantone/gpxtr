@@ -11,11 +11,18 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
-    <form id="gpx_upload" method="post" enctype="multipart/form-data">
+    <form id="gpx_upload" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
       <div class="row my-3">
-        <label class="col-sm-2 col-form-label" for="file">GPX file</label>
+        <label class="col-sm-2 col-form-label" for="gpxFile">GPX file</label>
         <div class="col-sm-10">
-          <input class="form-control-file" type="file" id="file" name="file" required>
+          <input class="form-control-file" type="file" id="gpxFile" name="file">
+        </div>
+        <div>
+          or
+        </div>
+        <label class="col-sm-2 col-form-label" for="gpxUrl">URL to GPX file</label>
+        <div class="col-sm-10">
+          <input class="form-control" type="url" id="gpxUrl" name="url">
         </div>
       </div>
 
@@ -76,5 +83,21 @@
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     document.getElementById("tz").defaultValue = timezone;
   });
+
+  function validateForm() {
+    var fileInput = document.getElementById('gpxFile').value;
+    var urlInput = document.getElementById('gpxUrl').value;
+
+    if (fileInput === '' && urlInput === '') {
+      alert('Please provide either a GPX file or a URL.');
+      return false;
+    }
+
+    if (fileInput !== '' && urlInput !== '') {
+      alert('Please provide only one: either a GPX file or a URL.');
+      return false;
+    }
+    return true;
+  }
 </script>
 {% endblock %}
