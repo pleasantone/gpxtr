@@ -10,6 +10,7 @@ from gpxpy.gpx import (
     GPXTrackSegment,
     GPXTrackPoint,
     GPXTrack,
+    GPXWaypoint,
 )
 from gpxpy.geo import Location
 from gpxtable.gpxtable import GPXTableCalculator, GPXTrackExt
@@ -32,13 +33,13 @@ def gpx_data() -> Tuple[GPX, StringIO]:
         [
             GPXTrackPoint(
                 48.2081743,
-                16.3738189,
+                16.3638189,
                 elevation=160,
                 time=datetime(2023, 7, 3, 10, 0, 0, tzinfo=timezone.utc),
             ),
             GPXTrackPoint(
                 48.2181743,
-                16.4738189,
+                16.4638189,
                 elevation=160,
                 time=datetime(2023, 7, 3, 11, 0, 0, tzinfo=timezone.utc),
             ),
@@ -46,6 +47,14 @@ def gpx_data() -> Tuple[GPX, StringIO]:
     )
     track.segments.append(segment)
     gpx.tracks.append(track)
+
+    gpx.waypoints.extend(
+        [
+            GPXWaypoint(48.2081743, 16.3638189, name="Start", symbol="Circle, Green"),
+            GPXWaypoint(48.2091743, 16.4138189, name="Break", symbol="Restroom"),
+            GPXWaypoint(48.2181743, 16.4638189, name="End", symbol="Circle, Blue"),
+        ]
+    )
 
     route = GPXRoute(
         name="Unit Test Route Name", description="Unit Test Route Description"
@@ -125,7 +134,7 @@ def test_get_points_data(gpx_data: Tuple[GPX, StringIO]) -> None:
 
 def test_get_nearest_locations(gpx_data: Tuple[GPX, StringIO]) -> None:
     gpx, _ = gpx_data
-    location = Location(48.2081744, 16.3738188)
+    location = Location(48.2081744, 16.3638188)
     track_ext = GPXTrackExt(gpx.tracks[0])
     nearest_locations = track_ext.get_nearest_locations(location)
     assert len(nearest_locations) == 1
