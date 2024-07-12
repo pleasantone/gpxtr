@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg">
+        <h1>{% block title %} GPXTable Results {% endblock %}</h1>
+
+        {% if format == "html" %}
+            <div class="border m-3">
+                {{ output | safe }}
+            </div>
+        {% elif format == "markdown" %}
+            <pre class="border m-3"><code class="language-markdown">
+                    {{- output | safe -}}
+            </code></pre>
+        {% else %}
+            <pre><code class="language-html">
+                    {{- output | safe -}}
+            </code></pre>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

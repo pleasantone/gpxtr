@@ -3,7 +3,7 @@
 {% block content %}
 <div class="row g-3">
   <div class="col-lg-6">
-    <h1>GPXtable {% block title %} File Upload {% endblock %}</h1>
+    <h1>{% block title %} GPX Upload {% endblock %}</h1>
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         {% for message in messages %}
@@ -11,41 +11,35 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
-    <form id="gpx_upload" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
-      <div class="row my-3">
-        <label class="col-sm-2 col-form-label" for="gpxFile">GPX file</label>
-        <div class="col-sm-10">
-          <input class="form-control-file" type="file" id="gpxFile" name="file">
+    <form class="my-2" id="gpx_upload" method="post" enctype="multipart/form-data" onsubmit="return validateForm()">
+      <div class="row border my-3 p-2">
+        <div class="input-group my-3">
+          <label class="input-group-text" for="gpxFile">GPX file</label>
+          <input class="form-control" type="file" id="gpxFile" name="file">
         </div>
-        <div>
+        <div class="mb-3">
           or
         </div>
-        <label class="col-sm-2 col-form-label" for="gpxUrl">URL to GPX file</label>
-        <div class="col-sm-10">
+        <div class="input-group mb-3">
+          <label class="input-group-text" for="gpxUrl">URL to GPX file</label>
           <input class="form-control" type="url" id="gpxUrl" name="url">
         </div>
       </div>
 
-      <div class="row my-3">
-        <label class="col-sm-2 col-form-label" for="departure" data-bs-toggle="tooltip" title="Override or specify daily departure time">Departing <i class="bi bi-info-circle"></i></label>
-        <div class="col-sm-10">
-          <input class="form-control" type="datetime-local" id="departure" name="departure">
-        </div>
+      <div class="input-group my-3">
+        <label class="input-group-text" for="departure" data-bs-toggle="tooltip" title="Override or specify daily departure time">Departing&nbsp;<i class="bi bi-info-circle"></i></label>
+        <input class="form-control" type="datetime-local" id="departure" name="departure">
       </div>
 
-      <div class="row my-3">
-        <label class="col-sm-2 col-form-label" for="speed" data-bs-toggle="tooltip" title="Override travel speed">Speed <i class="bi bi-info-circle"></i></label>
-        <div class="col-sm-10">
-          <input class="form-control" type="text" id="speed" name="speed" pattern="[\d\.]*" inputmode="numeric" size="3"
-            aria-describedby="speedHelp">
-        </div>
+      <div class="input-group my-3">
+        <label class="input-group-text" for="speed" data-bs-toggle="tooltip" title="Override travel speed">Speed&nbsp;<i class="bi bi-info-circle"></i></label>
+        <input class="form-control" type="text" id="speed" name="speed" pattern="[\d\.]*" inputmode="numeric" size="3"
+                aria-describedby="speedHelp">
       </div>
 
-      <div class="row my-3">
-        <label class="col-sm-2 col-form-label" for="tz" data-bs-toggle="tooltip" title="Local time zone">Timezone <i class="bi bi-info-circle"></i></label>
-        <div class="col-sm-10">
-          <input class="form-control" type="text" id="tz" name="tz" aria-describedby="tzHelp" default="">
-        </div>
+      <div class="input-group my-3">
+        <label class="input-group-text" for="tz" data-bs-toggle="tooltip" title="Local time zone">Timezone&nbsp;<i class="bi bi-info-circle"></i></label>
+        <input class="form-control" type="text" id="tz" name="tz" aria-describedby="tzHelp" default="">
       </div>
 
       <div class="input-group my-3">

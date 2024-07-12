@@ -8,7 +8,14 @@ import html
 import requests
 import secrets
 from datetime import datetime
-from flask import Flask, request, flash, redirect, render_template, abort, url_for
+from flask import (
+    Flask,
+    request,
+    flash,
+    redirect,
+    render_template,
+    url_for,
+)
 
 import dateutil.parser
 import dateutil.tz
@@ -25,7 +32,7 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
 app.config["SECRET_KEY"] = secrets.token_urlsafe(16)
 
 
-def create_table(stream, tz=None) -> str:
+def create_table(stream, tz=None):
     try:
 
         depart_at = None
@@ -53,13 +60,17 @@ def create_table(stream, tz=None) -> str:
             buffer.flush()
             output = buffer.getvalue()
             if request.form.get("output") == "markdown":
-                return "<pre>" + output + "</pre>"
-            output = markdown2.markdown(output, extras=["tables"])
+                return output
+            output = str(markdown2.markdown(output, extras=["tables"]))
             if request.form.get("output") == "htmlcode":
-                return "<pre>" + html.escape(output) + "</pre>"
+                return html.escape(output)
             return output
+    except gpxpy.gpx.GPXXMLSyntaxException as err:
+        flash(f"Unable to parse GPX information: {err}")
+        return redirect(url_for("upload_file"))
     except gpxpy.gpx.GPXException as err:
-        abort(401, f"{stream.filename}: {err}")
+        flash(f"{err}")
+        return redirect(url_for("upload_file"))
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -73,12 +84,16 @@ def upload_file():
             if not validators.url(url):
                 flash("Invalid URL")
                 return redirect(url_for("upload_file"))
-            response = requests.get(url)
+            try:
+                response = requests.get(url)
+            except requests.ConnectionError as err:
+                flash(f"Unable to retrieve URL: {err}")
+                return redirect(url_for("upload_file"))
             if response.status_code == 200:
                 file = io.BytesIO(response.content)
             else:
                 flash(
-                    "Error fetching the GPX file from the provided URL: {response.reason}"
+                    f"Error fetching the GPX file from the provided URL: {response.reason}"
                 )
                 return redirect(url_for("upload_file"))
         elif "file" in request.files:
@@ -96,7 +111,12 @@ def upload_file():
             if not tz:
                 flash("Invalid timezone")
                 return redirect(url_for("upload_file"))
-        return create_table(file, tz=tz)
+
+        if type(output := create_table(file, tz=tz)) == str:
+            return render_template(
+                "results.html", output=output, format=request.form.get("output")
+            )
+        return output
     return render_template("upload.html")
 
 
