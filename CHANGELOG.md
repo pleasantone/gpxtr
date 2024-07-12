@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/pleasantone/gpxtable/compare/v1.3.0...v1.4.0) (2024-07-12)
+
+
+### Features
+
+* **wsgi:** Improve error handling and result outputs ([56efa62](https://github.com/pleasantone/gpxtable/commit/56efa627402f0ad0dfaf188b6183f5b12df417c8))
+
 ## [1.3.0](https://github.com/pleasantone/gpxtable/compare/v1.2.1...v1.3.0) (2024-07-12)
 
 
