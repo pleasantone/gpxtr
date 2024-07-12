@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/pleasantone/gpxtable/compare/v1.2.1...v1.3.0) (2024-07-12)
+
+
+### Features
+
+* support URL upload in addition to file upload ([74fda77](https://github.com/pleasantone/gpxtable/commit/74fda77217138629e22a15da9f9e60c6e6d17797))
+
+
+### Bug Fixes
+
+* include requests dependencies ([2cf563b](https://github.com/pleasantone/gpxtable/commit/2cf563b2ba5a3bdbe9d6421faffeb3756364f7d4))
+
 ## [1.2.1](https://github.com/pleasantone/gpxtable/compare/v1.2.0...v1.2.1) (2024-07-08)
 
 
