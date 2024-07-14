@@ -2,3 +2,15 @@ runtime: python312
 entrypoint: gunicorn -b :$PORT --chdir src/gpxtable wsgi:app
 env_variables:
   TZ: "America/Los_Angeles"
+
+handlers:
+- url: /static
+  static_dir: src/gpxtable/static
+  secure: always
+- url: /favicon.ico
+  static_files: src/gpxtable/static/favicon.ico
+  secure: always
+  upload: src/gpxtable/static/favicon.ico
+- url: /*
+  script: auto
+  secure: always
