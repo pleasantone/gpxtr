@@ -7,7 +7,8 @@ on:
       - main
 
 jobs:
-  job_id:
+  deploy:
+    runs-on: ubuntu-latest
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -25,3 +26,5 @@ jobs:
     # Example of using the output
     - id: 'test'
       run: 'curl "${{ steps.deploy.outputs.version_url }}"'
+
+
