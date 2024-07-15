@@ -1,0 +1,30 @@
+name: "Deploy to GAE"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    runs-on: ubuntu-latest
+    name: Check out and deploy to GAE
+    steps:
+    - id: 'checkout'
+      uses: 'actions/checkout@v4'
+    - id: 'auth'
+      name: 'Authenticate to Google Cloud'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        workload_identity_provider: 'projects/263669409016/locations/global/workloadIdentityPools/github/providers/github'
+        service_account: 'github-actions@gpxtable.iam.gserviceaccount.com'
+
+    - id: 'deploy'
+      uses: 'google-github-actions/deploy-appengine@v2'
+
+    # Example of using the output
+    - id: 'test'
+      run: 'curl "${{ steps.deploy.outputs.version_url }}"'
