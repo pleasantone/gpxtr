@@ -73,26 +73,26 @@
 </div>
 {% endblock %}
 {% block extrabody %}
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        document.getElementById("tz").defaultValue = timezone;
-    });
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            document.getElementById("tz").defaultValue = timezone;
+        });
 
-    function validateForm() {
-        var fileInput = document.getElementById('gpxFile').value;
-        var urlInput = document.getElementById('gpxUrl').value;
+        function validateForm() {
+            var fileInput = document.getElementById('gpxFile').value;
+            var urlInput = document.getElementById('gpxUrl').value;
 
-        if (fileInput === '' && urlInput === '') {
-            alert('Please provide either a GPX file or a URL.');
-            return false;
+            if (fileInput === '' && urlInput === '') {
+                alert('Please provide either a GPX file or a URL.');
+                return false;
+            }
+
+            if (fileInput !== '' && urlInput !== '') {
+                alert('Please provide only one: either a GPX file or a URL.');
+                return false;
+            }
+            return true;
         }
-
-        if (fileInput !== '' && urlInput !== '') {
-            alert('Please provide only one: either a GPX file or a URL.');
-            return false;
-        }
-        return true;
-    }
-</script>
+    </script>
 {% endblock %}
