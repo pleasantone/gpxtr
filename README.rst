@@ -13,7 +13,19 @@ While the impetus was motorcycle travel, it works for any sort of trip planning.
 Unlike most software, it can read both routes as well as tracks. It will do its
 best to match waypoints to locations on a track to calculate time and distances.
 
-In the following example, a GPX route was produced in Garmin's Basecamp application.
+GPXtable provides:
+
+* A module that can be imported into your own software
+* A command-line program wrapper
+* An extensible Flask/WSGI wrapper
+
+You can see an example of the WSGI wrapper at work at https://gpxtable.wn.r.appspot.com/
+
+In the following example, a GPX route was produced in Garmin's Basecamp application,
+the output is in Markdown_ which is human readable but also easily converted into
+other formats like HTML.
+
+.. _Markdown: https://www.markdownguide.org/
 
 .. code-block:: console
 
@@ -36,7 +48,8 @@ In the following example, a GPX route was produced in Garmin's Basecamp applicat
 
    - 07/30/23: Sunrise: 06:11, Starts: 09:15, Ends: 17:41, Sunset: 20:20
 
-We also include sunrise and sunset so you know when you're going to get there.
+We also include sunrise and sunset so you know when you're going to get there
+and if you'll be traveling in the dark.
 
 If you're using tracks and waypoints, since they don't typically have valid timestamps, you'll
 need to specify your departure time.
@@ -47,7 +60,7 @@ as well as several other routing applications.
 Full documentation
 ==================
 
-Main documentation available at <http://gpxtable.readthedocs.io/>.
+Main documentation available at http://gpxtable.readthedocs.io/.
 
 .. image:: https://readthedocs.org/projects/gpxtable/badge/?version=latest
    :target: https://gpxtable.readthedocs.io/en/latest/?badge=latest
