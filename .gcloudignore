@@ -6,25 +6,25 @@
 # For more information, run:
 #   $ gcloud topic gcloudignore
 #
-.coverage/
-.gcloudignore
-.git
+.coverage
+.dockerignore
+.DS_Store
 .github
 .gitignore
-.pytest_cache
+.pytest_cache/
 .readthedocs.yaml
 .ruff_cache/
 .venv/
 .vscode/
 .whitesource
-CHANGELOG.md
-Docker.*
-LICENSE
-README.rst
 build/
+CHANGELOG.md
 dist/
+Dockerfile.*
 docs/
 junit/
+LICENSE
+README.rst
 samples/
 tests/
 

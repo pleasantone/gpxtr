@@ -1,9 +1,10 @@
-name: "Deploy to GAE"
+name: "Deploy to Google App Engine"
 
 on:
   push:
     branches:
-      - main
+      - 'main'
+      - 'release/**/*'
 
 jobs:
   deploy:
@@ -19,12 +20,23 @@ jobs:
       name: 'Authenticate to Google Cloud'
       uses: 'google-github-actions/auth@v2'
       with:
-        workload_identity_provider: 'projects/263669409016/locations/global/workloadIdentityPools/github/providers/github'
-        service_account: 'github-actions@gpxtable.iam.gserviceaccount.com'
+        workload_identity_provider: '${{ vars.GOOGLE_WIF_PROVIDER_NAME }}'
+        service_account: '${{ vars.GOOGLE_SERVICE_ACCOUNT_EMAIL }}'
 
     - id: 'deploy'
+      name: "Deploy to App Engine"
       uses: 'google-github-actions/deploy-appengine@v2'
+      with:
+        project_id: '${{ vars.GOOGLE_PROJECT_ID }}'
 
     # Example of using the output
     - id: 'test'
-      run: 'curl "${{ steps.deploy.outputs.version_url }}"'
+      run: |-
+        curl '${{ steps.deploy.outputs.version_url }}' \
+        --silent \
+        --fail \
+        --location \
+        --retry 5 \
+        --retry-connrefused \
+        --retry-delay 5 \
+        --retry-max-time 300
