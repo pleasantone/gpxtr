@@ -193,10 +193,13 @@ class GPXTrackExt(GPXTrack):
 
 class GPXPointMixin:
     """
-    Mixin for GPXWaypoint and GPXRoutePoint to extend functionality
+    :class:`gpxpy.GPXWaypoint` and :class:`gpxpy.GPXRoutePoint` functionality extensions
+
+    This class mostly exists to add default point type data to a route/way point based
+    upon either they point symbol or a regular expression match of the waypoint name.
+
     """
 
-    #: Class variable point_types may be overridden or extended.
     point_types: list[tuple[str, dict]] = [
         (
             "Gas/Restaurant",
@@ -233,6 +236,17 @@ class GPXPointMixin:
         ),
         ("Photo", {"search": r"\bPhotos?\b|\b\(P\)\b", "delay": 5}),
     ]
+    """
+        a list of tuples providing notations that will be used for waypoints or
+        route points if no other timing/type data is found. The list is iterated
+        in sequence, the first match is returned.
+
+        Parameters:
+            symbol (str): type of waypoint (comment notation)
+            search (regex): regular expression matching waypoint name
+            delay (int): default delay in minutes
+            marker (str): shorthand notation for gas or lunch (a meal) or both
+    """
 
     def __init__(self, base: Union[GPXWaypoint, GPXRoutePoint]):
         assert isinstance(self, (GPXWaypoint, GPXRoutePoint))
