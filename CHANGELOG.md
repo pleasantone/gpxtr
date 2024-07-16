@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/pleasantone/gpxtable/compare/v1.4.0...v1.5.0) (2024-07-16)
+
+
+### Features
+
+* **wsgi:** add favicon style icons to web page ([6439175](https://github.com/pleasantone/gpxtable/commit/643917535536c3de33d25144067036858714b800))
+
+
+### Bug Fixes
+
+* **wsgi:** optimize extra js and css and fix copied button ([5439c59](https://github.com/pleasantone/gpxtable/commit/5439c591cff575ba5051b9c7d02a8a652bf5c741))
+
 ## [1.4.0](https://github.com/pleasantone/gpxtable/compare/v1.3.0...v1.4.0) (2024-07-12)
 
 
