@@ -37,7 +37,7 @@ jobs:
       uses: 'google-github-actions/auth@v2'
       with:
         workload_identity_provider: 'projects/263669409016/locations/global/workloadIdentityPools/my-pool/providers/github'
-        service_account: 'gpxtable@appspot.gserviceaccount.com'
+#        service_account: 'gpxtable@appspot.gserviceaccount.com'
 
     - id: 'deploy'
       uses: 'google-github-actions/deploy-appengine@v2'
