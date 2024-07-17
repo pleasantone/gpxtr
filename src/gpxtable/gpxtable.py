@@ -117,8 +117,10 @@ class GPXTrackExt(GPXTrack):
                 previous = point
             return filtered
 
-        assert location
-        assert threshold_distance
+        if not location:
+            raise ValueError("no location")
+        if not threshold_distance:
+            raise ValueError("threshold distance must be >0")
 
         result: List[NearestLocationDataExt] = []
 
@@ -249,7 +251,8 @@ class GPXPointMixin:
     """
 
     def __init__(self, base: Union[GPXWaypoint, GPXRoutePoint]):
-        assert isinstance(self, (GPXWaypoint, GPXRoutePoint))
+        if not isinstance(self, (GPXWaypoint, GPXRoutePoint)):
+            raise TypeError("Not extending a GPXWaypoint or GPXRoutePoint")
         super().__init__(
             latitude=base.latitude,  # type: ignore
             longitude=base.longitude,  # type: ignore
@@ -267,7 +270,7 @@ class GPXPointMixin:
         self.extensions = base.extensions
 
     def _classify(self):
-        assert isinstance(
+        if not isinstance(
             self,
             (
                 GPXWaypoint,
@@ -275,7 +278,8 @@ class GPXPointMixin:
                 GPXWaypointExt,
                 GPXRoutePointExt,
             ),
-        )
+        ):
+            raise TypeError("Invalid instance extension")
         for symbol, values in self.point_types:
             if self.symbol == symbol:
                 return symbol, values
@@ -302,8 +306,8 @@ class GPXPointMixin:
         return bool(symbol and symbol.startswith("Gas"))
 
     def shaping_point(self) -> bool:
-        """:return: True if route point is a shaping/Via point"""
-        assert isinstance(
+        """Is this route point is a shaping or via point and should be ignored"""
+        if not isinstance(
             self,
             (
                 GPXWaypoint,
@@ -311,7 +315,8 @@ class GPXPointMixin:
                 GPXWaypointExt,
                 GPXRoutePointExt,
             ),
-        )
+        ):
+            raise TypeError("Invalid instance extension")
         if not self.name:
             return True
         if self.name.startswith("Via ") or self.name.endswith("(V)"):
