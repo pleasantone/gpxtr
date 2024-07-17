@@ -5,4 +5,4 @@ API
    :members:
 
 .. autoclass:: gpxtable.GPXPointMixin
-   :members: point_types
+   :members:

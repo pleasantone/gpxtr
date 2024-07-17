@@ -90,16 +90,17 @@ class GPXTrackExt(GPXTrack):
     ) -> List[NearestLocationDataExt]:
         # pylint: disable=too-many-locals
         """
-        Returns a list of locations of elements like
-        consisting of points where the location may be on the track
+        Returns:
+            list: locations of elements where the location may be on the track
 
-        threshold_distance is the minimum distance from the track
-        so that the point *may* be counted as to be "on the track".
-        For example 0.01 means 1% of the track distance.
+        Parameters:
+            threshold_distance: the minimum distance from the track
+                so that the point *may* be counted as to be "on the track".
+                For example 0.01 means 1% of the track distance.
 
-        deduplicate_distance is an actual distance in meters, not a
-        ratio based upon threshold. 2000 means it will not return
-        duplicates within 2km in case the track wraps around itself.
+            deduplicate_distance: absolute distance in meters where a
+                duplicate will not be returned in case the track wraps
+                around itself.
         """
 
         def _deduplicate(
@@ -195,11 +196,8 @@ class GPXTrackExt(GPXTrack):
 
 class GPXPointMixin:
     """
-    :class:`gpxpy.GPXWaypoint` and :class:`gpxpy.GPXRoutePoint` functionality extensions
-
-    This class mostly exists to add default point type data to a route/way point based
-    upon either they point symbol or a regular expression match of the waypoint name.
-
+    :class:`gpxpy.GPXWaypoint` and :class:`gpxpy.GPXRoutePoint` functionality
+    extensions
     """
 
     point_types: list[tuple[str, dict]] = [
@@ -239,15 +237,15 @@ class GPXPointMixin:
         ("Photo", {"search": r"\bPhotos?\b|\b\(P\)\b", "delay": 5}),
     ]
     """
-        a list of tuples providing notations that will be used for waypoints or
-        route points if no other timing/type data is found. The list is iterated
-        in sequence, the first match is returned.
+        Additional data used for points if no other timing/type data is found.
+        The list is iterated in sequence, the first match is returned.
 
         Parameters:
             symbol (str): type of waypoint (comment notation)
             search (regex): regular expression matching waypoint name
             delay (int): default delay in minutes
-            marker (str): shorthand notation for gas or lunch (a meal) or both
+            marker (str): shorthand notation for gas or lunch (a
+                meal) or both ("G", "L", "GL")
     """
 
     def __init__(self, base: Union[GPXWaypoint, GPXRoutePoint]):
