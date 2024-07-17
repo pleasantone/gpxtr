@@ -55,7 +55,7 @@ class GPXTrackExt(GPXTrack):
 
     def get_points_data(self, distance_2d: bool = False) -> List[PointData]:
         """
-        Returns a list of tuples containing the actual point, its distance from the start,
+        Returns a list of tuples containing the actual waypoint, its distance from the start,
         track_no, segment_no, and segment_point_no
         """
         distance_from_start = 0.0
@@ -108,14 +108,14 @@ class GPXTrackExt(GPXTrack):
         ) -> List[NearestLocationDataExt]:
             previous: Optional[NearestLocationDataExt] = None
             filtered: List[NearestLocationDataExt] = []
-            for point in locations:
+            for current in locations:
                 if (
                     not previous
-                    or (point.distance_from_start - previous.distance_from_start)
+                    or (current.distance_from_start - previous.distance_from_start)
                     > delta
                 ):
-                    filtered.append(point)
-                previous = point
+                    filtered.append(current)
+                previous = current
             return filtered
 
         if not location:
