@@ -41,7 +41,7 @@ class InvalidSubmission(Exception):
 def invalid_submission(err):
     flash(str(err))
     app.logger.info(err)
-    return redirect(url_for("upload.html"))
+    return redirect(url_for("upload_file"))
 
 
 def create_table(stream, tz=None):
