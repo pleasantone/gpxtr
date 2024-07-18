@@ -1,4 +1,4 @@
-# pylint: disable=line-too-long, missing-function-docstring
+# pylint: disable=line-too-long
 """
 gpxtable - Create a markdown template from a Garmin GPX file for route information
 """
@@ -13,7 +13,6 @@ import astral.sun
 import gpxpy.geo
 from gpxpy.gpx import (
     GPX,
-    GPXTrack,
     GPXWaypoint,
     GPXRoutePoint,
     GPXTrackPoint,
@@ -36,21 +35,22 @@ class NearestLocationDataExt(NamedTuple):
     Includes distance_from_start
     """
 
-    location: "GPXTrackPoint"
+    location: GPXTrackPoint
     track_no: int
     segment_no: int
     point_no: int
     distance_from_start: float
+    min_distance: float
 
 
-class GPXTrackExt(GPXTrack):
+class GPXTrackExt:
     """
     Extended class for GPXTrack
 
     usage: ext_track = GPXTrackExt(track)
     """
 
-    def __init__(self, track):  # pylint: disable=super-init-not-called
+    def __init__(self, track):
         self.gpx_track = track
 
     def get_points_data(self, distance_2d: bool = False) -> List[PointData]:
@@ -88,7 +88,6 @@ class GPXTrackExt(GPXTrack):
         threshold_distance: float = 0.01,
         deduplicate_distance: float = 0.0,
     ) -> List[NearestLocationDataExt]:
-        # pylint: disable=too-many-locals
         """
         Returns:
             list: locations of elements where the location may be on the track
@@ -118,79 +117,33 @@ class GPXTrackExt(GPXTrack):
                 previous = current
             return filtered
 
-        if not location:
-            raise ValueError("no location")
-        if not threshold_distance:
-            raise ValueError("threshold distance must be >0")
+        points = self.get_points_data()
+        if not points:
+            return []
 
         result: List[NearestLocationDataExt] = []
-
-        points = self.get_points_data()
-
-        if not points:
-            return result
-
         distance: Optional[float] = points[-1][1]
-
         threshold = (distance or 0.0) * threshold_distance
-
-        min_distance_candidate: Optional[float] = None
-        distance_from_start_candidate: Optional[float] = None
-        track_no_candidate: Optional[int] = None
-        segment_no_candidate: Optional[int] = None
-        point_no_candidate: Optional[int] = None
-        point_candidate: Optional[GPXTrackPoint] = None
+        candidate: Optional[NearestLocationDataExt] = None
 
         for point, distance_from_start, track_no, segment_no, point_no in points:
             distance = location.distance_3d(point) or math.inf
             if distance < threshold:
-                if min_distance_candidate is None or distance < min_distance_candidate:
-                    min_distance_candidate = distance
-                    distance_from_start_candidate = distance_from_start
-                    track_no_candidate = track_no
-                    segment_no_candidate = segment_no
-                    point_no_candidate = point_no
-                    point_candidate = point
-            else:
-                if (
-                    distance_from_start_candidate is not None
-                    and point_candidate is not None
-                    and track_no_candidate is not None
-                    and segment_no_candidate is not None
-                    and point_no_candidate is not None
-                ):
-                    result.append(
-                        NearestLocationDataExt(
-                            point_candidate,
-                            track_no_candidate,
-                            segment_no_candidate,
-                            point_no_candidate,
-                            distance_from_start_candidate,
-                        )
+                if not candidate or distance < candidate.min_distance:
+                    candidate = NearestLocationDataExt(
+                        point,
+                        track_no,
+                        segment_no,
+                        point_no,
+                        distance_from_start,
+                        distance,
                     )
-                min_distance_candidate = None
-                distance_from_start_candidate = None
-                track_no_candidate = None
-                segment_no_candidate = None
-                point_no_candidate = None
-                point_candidate = None
-
-        if (
-            distance_from_start_candidate is not None
-            and point_candidate is not None
-            and track_no_candidate is not None
-            and segment_no_candidate is not None
-            and point_no_candidate is not None
-        ):
-            result.append(
-                NearestLocationDataExt(
-                    point_candidate,
-                    track_no_candidate,
-                    segment_no_candidate,
-                    point_no_candidate,
-                    distance_from_start_candidate,
-                )
-            )
+            else:
+                if candidate:
+                    result.append(candidate)
+                    candidate = None
+        if candidate:
+            result.append(candidate)
         return _deduplicate(result, deduplicate_distance)
 
 
@@ -200,41 +153,37 @@ class GPXPointMixin:
     extensions
     """
 
-    point_types: list[tuple[str, dict]] = [
-        (
-            "Gas/Restaurant",
-            {
-                "search": r"(?=.*\b(Gas|Fuel)\b)(?=.*\b(Lunch|Meal)\b)",
-                "delay": 75,
-                "marker": "GL",
-            },
-        ),
-        (
-            "Gas Station",
-            {"search": r"\bGas\b|\bFuel\b|\b\(G\)\b", "delay": 15, "marker": "G"},
-        ),
-        (
-            "Restaurant",
-            {
-                "search": r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b|\b\(L\)\b",
-                "delay": 60,
-                "marker": "L",
-            },
-        ),
-        (
-            "Restroom",
-            {
-                "search": r"\bRestroom\b|\bBreak\b|\b\(R\)\b",
-                "delay": 15,
-            },
-        ),
-        (
-            "Scenic Area",
-            {
-                "delay": 5,
-            },
-        ),
-        ("Photo", {"search": r"\bPhotos?\b|\b\(P\)\b", "delay": 5}),
+    point_types: list[dict] = [
+        {
+            "symbol": "Gas/Restaurant",
+            "search": r"(?=.*\b(Gas|Fuel)\b)(?=.*\b(Lunch|Meal)\b)",
+            "delay": 75,
+            "marker": "GL",
+            "fuel_reset": True,
+        },
+        {
+            "symbol": "Gas Station",
+            "search": r"\bGas\b|\bFuel\b|\b\(G\)\b",
+            "delay": 15,
+            "marker": "G",
+            "fuel_reset": True,
+        },
+        {
+            "symbol": "Restaurant",
+            "search": r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b|\b\(L\)\b",
+            "delay": 60,
+            "marker": "L",
+        },
+        {
+            "symbol": "Restroom",
+            "search": r"\bRestroom\b|\bBreak\b|\b\(R\)\b",
+            "delay": 15,
+        },
+        {
+            "symbol": "Scenic Area",
+            "delay": 5,
+        },
+        {"symbol": "Photo", "search": r"\bPhotos?\b|\b\(P\)\b", "delay": 5},
     ]
     """
         Additional data used for points if no other timing/type data is found.
@@ -246,6 +195,7 @@ class GPXPointMixin:
             delay (int): default delay in minutes
             marker (str): shorthand notation for gas or lunch (a
                 meal) or both ("G", "L", "GL")
+            fuel_reset (bool): reset due to refueling
     """
 
     def __init__(self, base: Union[GPXWaypoint, GPXRoutePoint]):
@@ -278,30 +228,30 @@ class GPXPointMixin:
             ),
         ):
             raise TypeError("Invalid instance extension")
-        for symbol, values in self.point_types:
-            if self.symbol == symbol:
-                return symbol, values
+        for values in self.point_types:
+            if self.symbol == values["symbol"]:
+                return values
             if "search" in values and re.search(
                 values["search"], self.name or "", re.I
             ):
-                self.symbol = symbol
-                return symbol, values
-        return self.symbol, {}
+                self.symbol = values["symbol"]
+                return values
+        return {}
 
     def delay(self) -> timedelta:
         """Layover delay for a given waypoint if not specified"""
-        symbol, values = self._classify()
+        values = self._classify()
         return timedelta(minutes=values.get("delay", 0))
 
     def marker(self) -> str:
         """Single or dual character marker for a given waypoint e.g. G, L, GL"""
-        symbol, values = self._classify()
+        values = self._classify()
         return values.get("marker", "")
 
     def fuel_stop(self) -> bool:
         """Is this a fuel stop, should we reset?"""
-        symbol, values = self._classify()
-        return bool(symbol and symbol.startswith("Gas"))
+        values = self._classify()
+        return values.get("fuel_reset", False)
 
     def shaping_point(self) -> bool:
         """Is this route point is a shaping or via point and should be ignored"""
@@ -326,10 +276,12 @@ class GPXPointMixin:
 
 
 class GPXWaypointExt(GPXPointMixin, GPXWaypoint):
-    pass
+    """GPXWaypoint including extra functions from Mixin"""
 
 
 class GPXRoutePointExt(GPXPointMixin, GPXRoutePoint):
+    """GPXRoutePoint including extra functions from Mixin"""
+
     def delay(self) -> timedelta:
         """layover time at a given RoutePoint (Basecamp extension)"""
         for extension in self.extensions:
@@ -364,14 +316,17 @@ class GPXTableCalculator:
     """
     Create a waypoint/route-point table based upon GPX information.
 
-    :param GPX gpx: gpxpy gpx data
-    :param TextIO output: output stream or (stdio if not specified)
-    :param bool imperial: display in Imperial units (default imperial)
-    :param float speed: optional speed of travel for time-distance calculations
-    :param datetime depart_at: if provided, departure time for route or tracks to start
-    :param bool ignore_times: ignore any timestamps in provided GPX routes or tracks
-    :param bool display_coordinates: include latitude and longitude of points in table
+    Parameters:
+        gpx: gpxpy gpx data
+        output: output stream or (stdio if not specified)
+        imperial: display in Imperial units (default imperial)
+        speed: optional speed of travel for time-distance calculations
+        depart_at: if provided, departure time for route or tracks to start
+        ignore_times: ignore any timestamps in provided GPX routes or tracks
+        display_coordinates: include latitude and longitude of points in table
     """
+
+    # pylint: disable=too-many-instance-attributes
 
     #: 200m allowed between waypoint and start/end of track
     waypoint_delta = 200.0
@@ -422,8 +377,7 @@ class GPXTableCalculator:
 
     def print_header(self) -> None:
         """
-        Print to stream generic information about the GPX data such as name, creator, and calculation
-        variables.
+        Output generic information about the GPX data such as name and creator
         """
         if self.gpx.name:
             print(f"## {self.gpx.name}", file=self.output)
@@ -456,7 +410,7 @@ class GPXTableCalculator:
             # assume (for now) that if there are multiple tracks, 1 track = 1 day
             depart_at = self.depart_at + timedelta(hours=24 * track_no)
             time_bounds = track.get_time_bounds()
-            # handle the case where the GPX generator is putting crap for times in the tracks (basecamp)
+            # handle case where basecamp is putting crap for times in the tracks
             if self.ignore_times or time_bounds.start_time == time_bounds.end_time:
                 track.remove_time()
             time_bounds = track.get_time_bounds()
@@ -523,7 +477,6 @@ class GPXTableCalculator:
                 [(wp, tp) for wp, tps in waypoints for tp in tps],
                 key=lambda entry: entry[1].point_no,
             )
-            track_length = track.length_2d()
 
             print(f"\n## Track: {track.name}", file=self.output)
             if track.description:
@@ -555,12 +508,13 @@ class GPXTableCalculator:
                 print(f"\n* {almanac}", file=self.output)
 
     def print_routes(self) -> None:
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches, too-many-locals
         """
         Print route points present in GPX routes.
 
-        If Garmin extensions to create "route-tracks" are present will calculate distances, arrival and departure
-        times properly. If the route points have symbols encoded properly, will automatically compute layover
+        If Garmin extensions to create "route-tracks" are present will calculate
+        distances, arrival and departure times properly. If the route points
+        have symbols encoded properly, will automatically compute layover
         estimates as well as gas stops.
         """
 
@@ -613,6 +567,7 @@ class GPXTableCalculator:
                         if not first_point and not last_point
                         else timedelta()
                     )
+                    # if it's not the same day/track, reset last gas
                     if last_gas > dist:
                         last_gas = 0.0
                     print(_rpe(), file=self.output)

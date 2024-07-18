@@ -5,6 +5,7 @@ gpxtable - Create a markdown template from a Garmin GPX file for route informati
 
 import argparse
 import io
+import sys
 from datetime import datetime
 
 import dateutil.parser
@@ -97,20 +98,19 @@ def main() -> None:
     except ValueError as err:
         raise SystemExit(err) from err
 
-    output = None
-    if args.output:
-        output = open(args.output, "w")
-
-    if args.html:
-        with io.StringIO() as buffer:
-            create_markdown(args, file=buffer)
-            buffer.flush()
-            print(markdown2.markdown(buffer.getvalue(), extras=["tables"]), file=output)
-    else:
-        create_markdown(args, file=output)
-
-    if output:
-        output.close()
+    with (
+        open(args.output, "w", encoding="utf-8") if args.output else sys.stdout
+    ) as output:
+        if args.html:
+            with io.StringIO() as buffer:
+                create_markdown(args, file=buffer)
+                buffer.flush()
+                print(
+                    markdown2.markdown(buffer.getvalue(), extras=["tables"]),
+                    file=output,
+                )
+        else:
+            create_markdown(args, file=output)
 
 
 if __name__ == "__main__":
