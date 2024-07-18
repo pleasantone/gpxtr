@@ -76,6 +76,13 @@ def test_cli_files_parm(test_case: str, arguments: list):
     assert result.stdout == expected_output
 
 
+def test_bad_xml():
+    input_file, _ = input_output_names("bad-xml")
+    result = _run_cli([input_file])
+    assert result.returncode != 0
+    assert "Error parsing XML" in result.stderr
+
+
 def generate_sample_output() -> None:
     for test_case, arguments in file_test_cases:
         input_file, output_file = input_output_names(test_case)

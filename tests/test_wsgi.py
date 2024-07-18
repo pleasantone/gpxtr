@@ -1,10 +1,12 @@
 import os
 import io
+from flask.testing import FlaskClient
 import pytest
 from gpxtable.wsgi import app
 
 TEST_FILE = "samples/basecamp.gpx"
 TEST_RESPONSE = b"Garmin Desktop App"
+BAD_XML_FILE = "samples/bad-xml.gpx"
 
 
 @pytest.fixture
@@ -15,14 +17,14 @@ def client():
         yield client
 
 
-def test_index(client):
+def test_index(client: FlaskClient):
     """Test the index page."""
     response = client.get("/")
     assert response.status_code == 200
     assert b"URL to GPX file" in response.data
 
 
-def test_upload_file(client):
+def test_upload_file(client: FlaskClient):
     """Test file upload."""
     data = {"file": (open(TEST_FILE, "rb"), os.path.dirname(TEST_FILE))}
     response = client.post("/", data=data, content_type="multipart/form-data")
@@ -30,7 +32,7 @@ def test_upload_file(client):
     assert TEST_RESPONSE in response.data
 
 
-def test_upload_url(client, monkeypatch):
+def test_upload_url(client: FlaskClient, monkeypatch: pytest.MonkeyPatch):
     """Test URL submission."""
 
     # Mock the requests.get call to return a dummy response
@@ -49,6 +51,16 @@ def test_upload_url(client, monkeypatch):
     response = client.post("/", data=data)
     assert response.status_code == 200
     assert TEST_RESPONSE in response.data
+
+
+def test_bad_xml(client: FlaskClient):
+    data = {"file": (open(BAD_XML_FILE, "rb"), os.path.dirname(BAD_XML_FILE))}
+    response = client.post(
+        "/", data=data, content_type="multipart/form-data", follow_redirects=True
+    )
+    assert response.history  # it was redirected
+    assert response.history[0].location == "/"
+    assert b"Unable to parse" in response.data
 
 
 if __name__ == "__main__":
