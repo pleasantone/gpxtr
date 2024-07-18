@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.5.1](https://github.com/pleasantone/gpxtable/compare/v1.5.0...v1.5.1) (2024-07-18)
+
+
+### Bug Fixes
+
+* change asserts to exceptions ([55be527](https://github.com/pleasantone/gpxtable/commit/55be52726e1fa9a5b8d184c37d129d4c601a26de))
+* **wsgi:** error handler ([f3cc839](https://github.com/pleasantone/gpxtable/commit/f3cc839abfe72f16fb0f0c13d9b768e77558c37d))
+
+
+### Documentation
+
+* Document point_types better ([44afc97](https://github.com/pleasantone/gpxtable/commit/44afc97af911b23079ee0fc64399bab499704ae3))
+* get module from local path ([90a663b](https://github.com/pleasantone/gpxtable/commit/90a663bbfd5d2185dd44dbc351f0a93c000f0241))
+* improve api documentation ([0cf8a74](https://github.com/pleasantone/gpxtable/commit/0cf8a74a23af25b075bd02804d080e51b430bfcb))
+* **wsgi:** Document the WSGI wrapper in README ([5c34f63](https://github.com/pleasantone/gpxtable/commit/5c34f63dbb8f362ee6f7b8903d6812de24163dd9))
+
 ## [1.5.0](https://github.com/pleasantone/gpxtable/compare/v1.4.0...v1.5.0) (2024-07-16)
 
 
