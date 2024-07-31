@@ -424,7 +424,9 @@ class GPXTableCalculator:
         if self.display_coordinates:
             result += self.LLP_FMT.format(waypoint.latitude, waypoint.longitude)
         distance_info = (
-            f"{self._format_long_length(round(track_point.distance_from_start - last_gas))}/{self._format_long_length(round(track_point.distance_from_start))}"
+            self._format_long_length(round(track_point.distance_from_start - last_gas))
+            + "/"
+            + self._format_long_length(round(track_point.distance_from_start))
             if waypoint.fuel_stop() or last_waypoint
             else f"{self._format_long_length(round(track_point.distance_from_start))}"
         )
@@ -541,6 +543,16 @@ class GPXTableCalculator:
         )
 
     def print_routes(self) -> None:
+        """
+        Prints the details of routes and calculates and prints point details.
+
+        Args:
+            self: The GPXTableCalculator instance.
+
+        Returns:
+            None
+        """
+
         def print_route_details(route):
             print(f"\n## Route: {route.name}", file=self.output)
             if route.description:

@@ -1,6 +1,7 @@
 import os
 import io
 from flask.testing import FlaskClient
+from requests import HTTPError
 import pytest
 from gpxtable.wsgi import app
 
@@ -40,6 +41,10 @@ def test_upload_url(client: FlaskClient, monkeypatch: pytest.MonkeyPatch):
         def __init__(self, content, status_code):
             self.content = content
             self.status_code = status_code
+
+        def raise_for_status(self):
+            if self.status_code != 200:
+                raise HTTPError(self.content)
 
     def mock_get(*args, **kwargs):
         with open(TEST_FILE, "rb") as f:

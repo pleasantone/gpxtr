@@ -1,4 +1,3 @@
-# pylint: disable=line-too-long, missing-function-docstring
 """
 gpxtable - Create a markdown template from a Garmin GPX file for route information
 """
@@ -74,7 +73,8 @@ class _DateParser(argparse.Action):
 
 def main() -> None:
     """
-    Parses command line arguments to generate a table in either markdown or HTML format based on the provided input files.
+    Parses command line arguments to generate a table in either markdown
+    or HTML format based on the provided input files.
 
     Args:
         None
