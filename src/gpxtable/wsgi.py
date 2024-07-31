@@ -44,7 +44,7 @@ def invalid_submission(err):
     return redirect(url_for("upload_file"))
 
 
-def create_table(stream, tz=None):
+def create_table(stream, tz=None):  # sourcery skip: extract-method
     depart_at = None
     departure = request.form.get("departure")
     if not tz:
@@ -82,41 +82,40 @@ def create_table(stream, tz=None):
 
 @app.route("/", methods=["GET", "POST"])
 def upload_file():
-    if request.method == "POST":
-        if url := request.form.get("url"):
-            if not validators.url(url):
-                raise InvalidSubmission("Invalid URL")
-            try:
-                response = requests.get(url, timeout=30)
-            except requests.ConnectionError as err:
-                raise InvalidSubmission(f"Unable to retrieve URL: {err}") from err
-            if response.status_code == 200:
-                file = io.BytesIO(response.content)
-            else:
-                raise InvalidSubmission(
-                    f"Error fetching the GPX file from the provided URL: {response.reason}"
-                )
-        elif file := request.files.get("file"):
-            # If the user does not select a file, the browser submits an
-            # empty file without a filename.
-            if not file.filename:
-                raise InvalidSubmission("No file selected")
+    if request.method != "POST":
+        return render_template("upload.html")
+    if url := request.form.get("url"):
+        if not validators.url(url):
+            raise InvalidSubmission("Invalid URL")
+        try:
+            response = requests.get(url, timeout=30)
+        except requests.ConnectionError as err:
+            raise InvalidSubmission(f"Unable to retrieve URL: {err}") from err
+        if response.status_code == 200:
+            file = io.BytesIO(response.content)
         else:
-            raise InvalidSubmission("Missing URL for GPX file or uploaded file.")
-
-        tz = None
-        if timezone := request.form.get("tz"):
-            tz = dateutil.tz.gettz(timezone)
-            if not tz:
-                raise InvalidSubmission("Invalid timezone")
-
-        if isinstance(result := create_table(file, tz=tz), str):
-            return render_template(
-                "results.html", output=result, format=request.form.get("output")
+            raise InvalidSubmission(
+                f"Error fetching the GPX file from the provided URL: {response.reason}"
             )
-        return result
+    elif file := request.files.get("file"):
+        # If the user does not select a file, the browser submits an
+        # empty file without a filename.
+        if not file.filename:
+            raise InvalidSubmission("No file selected")
+    else:
+        raise InvalidSubmission("Missing URL for GPX file or uploaded file.")
 
-    return render_template("upload.html")
+    tz = None
+    if timezone := request.form.get("tz"):
+        tz = dateutil.tz.gettz(timezone)
+        if not tz:
+            raise InvalidSubmission("Invalid timezone")
+
+    if isinstance(result := create_table(file, tz=tz), str):
+        return render_template(
+            "results.html", output=result, format=request.form.get("output")
+        )
+    return result
 
 
 @app.route("/about")

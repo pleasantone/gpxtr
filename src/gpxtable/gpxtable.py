@@ -1,4 +1,3 @@
-# pylint: disable=line-too-long
 """
 gpxtable - Create a markdown template from a Garmin GPX file for route information
 """
@@ -269,10 +268,7 @@ class GPXPointMixin:
             return True
         if self.name.startswith("Via ") or self.name.endswith("(V)"):
             return True
-        for extension in self.extensions:
-            if "ShapingPoint" in extension.tag:
-                return True
-        return False
+        return any("ShapingPoint" in extension.tag for extension in self.extensions)
 
 
 class GPXWaypointExt(GPXPointMixin, GPXWaypoint):
@@ -288,11 +284,9 @@ class GPXRoutePointExt(GPXPointMixin, GPXRoutePoint):
             for duration in extension.findall(
                 "trp:StopDuration", GPXTABLE_XML_NAMESPACE
             ):
-                match = re.match(r"^PT((\d+)H)?((\d+)M)?$", duration.text)
-                if match:
+                if match := re.match(r"^PT((\d+)H)?((\d+)M)?$", duration.text):
                     return timedelta(
-                        hours=int(match.group(2) or "0"),
-                        minutes=int(match.group(4) or "0"),
+                        hours=int(match[2] or "0"), minutes=int(match[4] or "0")
                     )
         return super().delay()
 
@@ -388,11 +382,10 @@ class GPXTableCalculator:
         move_data = self.gpx.get_moving_data()
         if move_data and move_data.moving_time:
             print(
-                f"* Total moving time: {self._format_time(move_data.moving_time, False)}",
+                f"* Total moving time: {self._format_time(move_data.moving_time)}",
                 file=self.output,
             )
-        dist = self.gpx.length_2d()
-        if dist:
+        if dist := self.gpx.length_2d():
             print(
                 f"* Total distance: {self._format_long_length(dist, True)}",
                 file=self.output,
@@ -413,7 +406,7 @@ class GPXTableCalculator:
             # handle case where basecamp is putting crap for times in the tracks
             if self.ignore_times or time_bounds.start_time == time_bounds.end_time:
                 track.remove_time()
-            time_bounds = track.get_time_bounds()
+                time_bounds = track.get_time_bounds()
             # if track has legitimate times in it, just adjust our delta for departure
             if time_bounds.start_time:
                 track.adjust_time(depart_at - time_bounds.start_time)
@@ -424,6 +417,40 @@ class GPXTableCalculator:
                 )
         self.gpx.add_missing_times()
 
+    def _format_waypoint_entry(
+        self, waypoint, track_point, last_gas, last_waypoint, waypoint_delays, layover
+    ) -> str:
+        result = ""
+        if self.display_coordinates:
+            result += self.LLP_FMT.format(waypoint.latitude, waypoint.longitude)
+        distance_info = (
+            f"{self._format_long_length(round(track_point.distance_from_start - last_gas))}/{self._format_long_length(round(track_point.distance_from_start))}"
+            if waypoint.fuel_stop() or last_waypoint
+            else f"{self._format_long_length(round(track_point.distance_from_start))}"
+        )
+        marker_info = (
+            waypoint.marker()
+            if track_point.distance_from_start > self.waypoint_delta
+            and not last_waypoint
+            else ""
+        )
+        arrival_time = (
+            (track_point.location.time + waypoint_delays)
+            .astimezone(self.tz)
+            .strftime("%H:%M")
+            if track_point.location.time
+            else ""
+        )
+        layover_info = f" (+{str(layover)[:-3]})" if layover else ""
+        return result + self.OUT_FMT.format(
+            (waypoint.name or "").replace("\n", " "),
+            distance_info,
+            marker_info,
+            arrival_time,
+            waypoint.symbol or "",
+            layover_info,
+        )
+
     def print_waypoints(self) -> None:
         """
         Print waypoint information
@@ -432,34 +459,6 @@ class GPXTableCalculator:
         the order and distance of the waypoints. If a departure time has been set, estimate
         the arrival time at each waypoint and probable layover times.
         """
-
-        def _wpe() -> str:
-            result = ""
-            if self.display_coordinates:
-                result += self.LLP_FMT.format(waypoint.latitude, waypoint.longitude)
-            return result + self.OUT_FMT.format(
-                (waypoint.name or "").replace("\n", " "),
-                (
-                    f"{self._format_long_length(round(track_point.distance_from_start - last_gas))}/{self._format_long_length(round(track_point.distance_from_start))}"
-                    if waypoint.fuel_stop() or last_waypoint
-                    else f"{self._format_long_length(round(track_point.distance_from_start))}"
-                ),
-                (
-                    waypoint.marker()
-                    if track_point.distance_from_start > self.waypoint_delta
-                    and not last_waypoint
-                    else ""
-                ),
-                (
-                    (track_point.location.time + waypoint_delays)
-                    .astimezone(self.tz)
-                    .strftime("%H:%M")
-                    if track_point.location.time
-                    else ""
-                ),
-                waypoint.symbol or "",
-                f" (+{str(layover)[:-3]})" if layover else "",
-            )
 
         self._populate_times()
         for track in self.gpx.tracks:
@@ -495,90 +494,123 @@ class GPXTableCalculator:
                     if not first_waypoint and not last_waypoint
                     else timedelta()
                 )
-                print(_wpe(), file=self.output)
+                print(
+                    self._format_waypoint_entry(
+                        waypoint,
+                        track_point,
+                        last_gas,
+                        last_waypoint,
+                        waypoint_delays,
+                        layover,
+                    ),
+                    file=self.output,
+                )
                 if waypoint.fuel_stop():
                     last_gas = track_point.distance_from_start
                 waypoint_delays += layover
-            almanac = self._sun_rise_set(
+            if almanac := self._sun_rise_set(
                 track.segments[0].points[0],
                 track.segments[-1].points[-1],
                 delay=waypoint_delays,
-            )
-            if almanac:
+            ):
                 print(f"\n* {almanac}", file=self.output)
 
+    @staticmethod
+    def _calculate_distance(previous, current):
+        return gpxpy.geo.distance(
+            previous[0], previous[1], None, current[0], current[1], None
+        )
+
+    def _format_route_point_entry(
+        self, point, dist, last_gas, last_point, first_point, timing, delay
+    ) -> str:
+        result = ""
+        if self.display_coordinates:
+            result += self.LLP_FMT.format(point.latitude, point.longitude)
+        return result + self.OUT_FMT.format(
+            (point.name or "").replace("\n", " "),
+            (
+                f"{self._format_long_length(dist - last_gas)}/{self._format_long_length(dist)}"
+                if point.fuel_stop() or last_point
+                else f"{self._format_long_length(dist)}"
+            ),
+            (point.marker() if not first_point and not last_point else ""),
+            timing.astimezone(self.tz).strftime("%H:%M") if timing else "",
+            point.symbol or "",
+            f" (+{str(delay)[:-3]})" if delay else "",
+        )
+
     def print_routes(self) -> None:
-        # pylint: disable=too-many-branches, too-many-locals
-        """
-        Print route points present in GPX routes.
-
-        If Garmin extensions to create "route-tracks" are present will calculate
-        distances, arrival and departure times properly. If the route points
-        have symbols encoded properly, will automatically compute layover
-        estimates as well as gas stops.
-        """
-
-        def _rpe() -> str:
-            result = ""
-            if self.display_coordinates:
-                result += self.LLP_FMT.format(point.latitude, point.longitude)
-            return result + self.OUT_FMT.format(
-                (point.name or "").replace("\n", " "),
-                (
-                    f"{self._format_long_length(dist - last_gas)}/{self._format_long_length(dist)}"
-                    if point.fuel_stop() or last_point
-                    else f"{self._format_long_length(dist)}"
-                ),
-                (point.marker() if not first_point and not last_point else ""),
-                timing.astimezone(self.tz).strftime("%H:%M") if timing else "",
-                point.symbol or "",
-                f" (+{str(delay)[:-3]})" if delay else "",
-            )
-
-        for route in self.gpx.routes:
+        def print_route_details(route):
             print(f"\n## Route: {route.name}", file=self.output)
             if route.description:
                 print(f"* {route.description}", file=self.output)
-
             print(self._format_output_header(), file=self.output)
+
+        def calculate_and_print_point_details(
+            point,
+            dist,
+            last_gas,
+            last_point,
+            first_point,
+            timing,
+            delay,
+            last_display_distance,
+        ):
+            if not point.shaping_point():
+                if timing:
+                    timing += self._travel_time(dist - last_display_distance)
+                last_display_distance = dist
+                if departure := point.departure_time(first_point, self.depart_at):
+                    timing = departure
+                delay = (
+                    point.delay() if not first_point and not last_point else timedelta()
+                )
+                if last_gas > dist:
+                    last_gas = 0.0
+                print(
+                    self._format_route_point_entry(
+                        point, dist, last_gas, last_point, first_point, timing, delay
+                    ),
+                    file=self.output,
+                )
+                if timing:
+                    timing += delay
+            return timing, last_display_distance
+
+        for route in self.gpx.routes:
+            print_route_details(route)
             if not route.points:
                 continue
+
             route_points = [GPXRoutePointExt(rp) for rp in route.points]
             dist = 0.0
             previous = route_points[0].latitude, route_points[0].longitude
             last_gas = 0.0
             timing = route_points[0].departure_time(True, self.depart_at)
-            delay = timedelta()
+
             if timing:
                 route_points[0].time = timing
+            delay = timedelta()
             last_display_distance = 0.0
+
             for point in route_points:
                 first_point = point is route_points[0]
                 last_point = point is route_points[-1]
-                if not point.shaping_point():
-                    if timing:
-                        timing += self._travel_time(dist - last_display_distance)
-                    last_display_distance = dist
-                    departure = point.departure_time(first_point, self.depart_at)
-                    if departure:
-                        timing = departure
-                    delay = (
-                        point.delay()
-                        if not first_point and not last_point
-                        else timedelta()
-                    )
-                    # if it's not the same day/track, reset last gas
-                    if last_gas > dist:
-                        last_gas = 0.0
-                    print(_rpe(), file=self.output)
-                    if timing:
-                        timing += delay
+                timing, last_display_distance = calculate_and_print_point_details(
+                    point,
+                    dist,
+                    last_gas,
+                    last_point,
+                    first_point,
+                    timing,
+                    delay,
+                    last_display_distance,
+                )
                 if point.fuel_stop():
                     last_gas = dist
                 current = point.latitude, point.longitude
-                dist += gpxpy.geo.distance(
-                    previous[0], previous[1], None, current[0], current[1], None
-                )
+                dist += self._calculate_distance(previous, current)
                 for extension in point.extensions:
                     for extension_point in extension.findall(
                         "gpxx:rpt", GPXTABLE_XML_NAMESPACE
@@ -586,46 +618,48 @@ class GPXTableCalculator:
                         current = float(extension_point.get("lat")), float(
                             extension_point.get("lon")
                         )
-                        dist += gpxpy.geo.distance(
-                            previous[0], previous[1], None, current[0], current[1], None
-                        )
+                        dist += self._calculate_distance(previous, current)
                         previous = current
                 previous = current
+
             if timing:
                 route_points[-1].time = timing
-            almanac = self._sun_rise_set(route_points[0], route_points[-1])
-            if almanac:
+            if almanac := self._sun_rise_set(route_points[0], route_points[-1]):
                 print(f"\n* {almanac}", file=self.output)
 
     def _format_output_header(self) -> str:
+        header = f"\n{self.OUT_HDR}\n{self.OUT_SEP}"
         if self.display_coordinates:
-            return f"\n{self.LLP_HDR}{self.OUT_HDR}\n{self.LLP_SEP}{self.OUT_SEP}"
-        return f"\n{self.OUT_HDR}\n{self.OUT_SEP}"
+            header = f"\n{self.LLP_HDR}{self.OUT_HDR}\n{self.LLP_SEP}{self.OUT_SEP}"
+        return header
 
     @staticmethod
-    def _format_time(time_s: float, seconds: bool) -> str:
-        if not time_s:
+    def _format_time(time_s: float) -> str:
+        if time_s == 0:
             return "n/a"
-        if seconds:
-            return str(int(time_s))
-        minutes = math.floor(time_s / 60.0)
-        hours = math.floor(minutes / 60.0)
-        return f"{int(hours):02d}:{int(minutes % 60):02d}:{int(time_s % 60):02d}"
+        minutes, seconds = divmod(time_s, 60)
+        hours, minutes = divmod(minutes, 60)
+        return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
 
     def _format_long_length(self, length: float, units: bool = False) -> str:
-        if self.imperial:
-            return f'{round(length / 1000. * KM_TO_MILES):.0f}{" mi" if units else ""}'
-        return f'{round(length / 1000.):.0f}{" km" if units else ""}'
+        conversion_factor = KM_TO_MILES if self.imperial else 1
+        unit = " mi" if self.imperial else " km"
+        formatted_length = round(length / 1000.0 * conversion_factor)
+        return f'{formatted_length:.0f}{unit if units else ""}'
 
     def _format_short_length(self, length: float, units: bool = False) -> str:
         if self.imperial:
-            return f'{length * M_TO_FEET:.2f}{" ft" if units else ""}'
-        return f'{length:.2f}{" m" if units else ""}'
+            length_str = f"{length * M_TO_FEET:.2f}"
+            unit_suffix = " ft" if units else ""
+        else:
+            length_str = f"{length:.2f}"
+            unit_suffix = " m" if units else ""
+
+        return length_str + unit_suffix
 
     def _format_speed(self, speed: Optional[float], units: bool = False) -> str:
         """speed is in kph"""
-        if not speed:
-            speed = 0.0
+        speed = speed or 0.0
         if self.imperial:
             return f'{speed * KM_TO_MILES:.2f}{" mph" if units else ""}'
         return f'{speed:.2f}{" km/h" if units else ""}'
@@ -638,34 +672,33 @@ class GPXTableCalculator:
         self,
         start: Union[GPXRoutePoint, GPXTrackPoint],
         end: Union[GPXRoutePoint, GPXTrackPoint],
-        delay: Optional[timedelta] = None,
+        delay: timedelta = timedelta(),
     ) -> str:
         """return sunrise/sunset and start & end info based upon the route start and end point"""
         if not start.time or not end.time:
             return ""
+
+        def create_location_info(name, point):
+            return astral.LocationInfo(
+                name, "", "", point.latitude, point.longitude
+            ).observer
+
         sun_start = astral.sun.sun(
-            astral.LocationInfo(
-                "Start Point", "", "", start.latitude, start.longitude
-            ).observer,
-            date=start.time,
+            create_location_info("Start Point", start), date=start.time
         )
         sun_end = astral.sun.sun(
-            astral.LocationInfo(
-                "End Point", "", "", end.latitude, end.longitude
-            ).observer,
-            date=end.time + (delay or timedelta()),
+            create_location_info("End Point", end), date=end.time + delay
         )
+
         times = {
             "Sunrise": sun_start["sunrise"],
             "Sunset": sun_end["sunset"],
             "Starts": start.time,
-            "Ends": end.time + (delay or timedelta()),
+            "Ends": end.time + delay,
         }
-        first = True
-        retval = f"{start.time.astimezone(self.tz):%x}: "
-        for name, time in sorted(times.items(), key=lambda kv: kv[1]):
-            if first is not True:
-                retval += ", "
-            first = False
-            retval += f"{name}: {time.astimezone(self.tz):%H:%M}"
+
+        retval = f"{start.time.astimezone(self.tz):%x}: " + ", ".join(
+            f"{name}: {time.astimezone(self.tz):%H:%M}"
+            for name, time in sorted(times.items(), key=lambda kv: kv[1])
+        )
         return retval

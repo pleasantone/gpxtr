@@ -19,6 +19,16 @@ from gpxtable import GPXTableCalculator
 
 
 def create_markdown(args, file=None) -> None:
+    """
+    Creates a markdown table based on GPX information provided in the input files.
+
+    Args:
+        args: Command line arguments containing input options.
+        file: File to write the markdown output to.
+
+    Raises:
+        SystemExit: If there is an issue with the timezone or parsing the GPX information.
+    """
     tz = None
     if args.timezone:
         tz = dateutil.tz.gettz(args.timezone)
@@ -63,6 +73,13 @@ class _DateParser(argparse.Action):
 
 
 def main() -> None:
+    """
+    Parses command line arguments and generates a markdown or HTML table based on the provided input files.
+
+    Returns:
+        None
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "input", nargs="+", type=argparse.FileType("r"), help="input file(s)"
