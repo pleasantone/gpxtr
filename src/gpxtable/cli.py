@@ -74,7 +74,16 @@ class _DateParser(argparse.Action):
 
 def main() -> None:
     """
-    Parses command line arguments and generates a markdown or HTML table based on the provided input files.
+    Parses command line arguments to generate a table in either markdown or HTML format based on the provided input files.
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Side Effects:
+        Reads input files, processes data, and writes output to a file or stdout.
 
     Returns:
         None
