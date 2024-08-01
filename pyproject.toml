@@ -42,7 +42,8 @@ gunicorn = [
 tests = [
     "pytest",
     "pytest-cov",
-    "pytest-flask"
+    "pytest-flask",
+    "responses"
 ]
 
 [project.urls]

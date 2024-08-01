@@ -3,8 +3,10 @@ import io
 from flask.testing import FlaskClient
 from requests import HTTPError
 import pytest
+import responses
 from gpxtable.wsgi import app
 
+TEST_FILE_URL = "http://mock.api/basecamp.gpx"
 TEST_FILE = "samples/basecamp.gpx"
 TEST_RESPONSE = b"Garmin Desktop App"
 BAD_XML_FILE = "samples/bad-xml.gpx"
@@ -12,6 +14,10 @@ BAD_XML_FILE = "samples/bad-xml.gpx"
 
 @pytest.fixture
 def client():
+    # add our fake responses
+    with open(TEST_FILE, "rb") as f:
+        responses.add(responses.GET, TEST_FILE_URL, status=200, body=f.read())
+
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False
     with app.test_client() as client:
@@ -33,27 +39,12 @@ def test_upload_file(client: FlaskClient):
     assert TEST_RESPONSE in response.data
 
 
+@responses.activate
 def test_upload_url(client: FlaskClient, monkeypatch: pytest.MonkeyPatch):
     """Test URL submission."""
 
-    # Mock the requests.get call to return a dummy response
-    class MockResponse:
-        def __init__(self, content, status_code):
-            self.content = content
-            self.status_code = status_code
-
-        def raise_for_status(self):
-            if self.status_code != 200:
-                raise HTTPError(self.content)
-
-    def mock_get(*args, **kwargs):
-        with open(TEST_FILE, "rb") as f:
-            return MockResponse(f.read(), 200)
-
-    monkeypatch.setattr("requests.get", mock_get)
-
-    data = {"url": "http://example.com/test.gpx"}
-    response = client.post("/", data=data)
+    data = {"url": TEST_FILE_URL}
+    response = client.post("/", data=data, follow_redirects=True)
     assert response.status_code == 200
     assert TEST_RESPONSE in response.data
 
