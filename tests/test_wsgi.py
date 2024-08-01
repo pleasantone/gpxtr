@@ -1,7 +1,5 @@
 import os
-import io
 from flask.testing import FlaskClient
-from requests import HTTPError
 import pytest
 import responses
 from gpxtable.wsgi import app

@@ -1,4 +1,3 @@
-from _pytest._py.path import LocalPath
 import argparse
 import pytest
 import subprocess
