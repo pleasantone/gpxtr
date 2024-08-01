@@ -1,5 +1,6 @@
 import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
+
 from io import StringIO
 from gpxpy.gpx import (
     GPX,
@@ -20,12 +21,16 @@ def gpx_data():
     segment = GPXTrackSegment()
     segment.points.append(
         GPXTrackPoint(
-            latitude=52.0, longitude=0.0, time=datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC)
+            latitude=52.0,
+            longitude=0.0,
+            time=datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
         )
     )
     segment.points.append(
         GPXTrackPoint(
-            latitude=52.1, longitude=0.1, time=datetime(2023, 1, 1, 9, 0, 0, tzinfo=UTC)
+            latitude=52.1,
+            longitude=0.1,
+            time=datetime(2023, 1, 1, 9, 0, 0, tzinfo=timezone.utc),
         )
     )
     track.segments.append(segment)
@@ -50,7 +55,7 @@ def output_stream():
         (
             True,
             30.0,
-            datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
             False,
             False,
             None,
@@ -59,7 +64,7 @@ def output_stream():
         (
             False,
             50.0,
-            datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
             True,
             True,
             None,
@@ -105,19 +110,19 @@ def test_print_waypoints(
         (
             True,
             30.0,
-            datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
             False,
             False,
-            UTC,
+            timezone.utc,
             "* Departure at Sun Jan  1 08:00:00 2023 UTC\n* Total moving time: 01:00:00\n* Total distance: 8 mi\n* Default speed: 30.00 mph\n",
         ),
         (
             False,
             50.0,
-            datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
             True,
             True,
-            UTC,
+            timezone.utc,
             "* Departure at Sun Jan  1 08:00:00 2023 UTC\n* Total moving time: 01:00:00\n* Total distance: 13 km\n* Default speed: 50.00 km/h\n",
         ),
     ],
@@ -160,19 +165,19 @@ def test_print_header(
         (
             True,
             30.0,
-            datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
             False,
             False,
-            UTC,
+            timezone.utc,
             "\n## Route: None\n\n| Name                           |   Dist. | GL |  ETA  | Notes\n| :----------------------------- | ------: | -- | ----: | :----\n",
         ),
         (
             False,
             50.0,
-            datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC),
+            datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
             True,
             True,
-            UTC,
+            timezone.utc,
             "\n## Route: None\n\n|        Lat,Lon       | Name                           |   Dist. | GL |  ETA  | Notes\n| :------------------: | :----------------------------- | ------: | -- | ----: | :----\n",
         ),
     ],
@@ -193,12 +198,16 @@ def test_print_routes(
     route = GPXRoute()
     route.points.append(
         GPXRoutePoint(
-            latitude=52.0, longitude=0.0, time=datetime(2023, 1, 1, 8, 0, 0, tzinfo=UTC)
+            latitude=52.0,
+            longitude=0.0,
+            time=datetime(2023, 1, 1, 8, 0, 0, tzinfo=timezone.utc),
         )
     )
     route.points.append(
         GPXRoutePoint(
-            latitude=52.1, longitude=0.1, time=datetime(2023, 1, 1, 9, 0, 0, tzinfo=UTC)
+            latitude=52.1,
+            longitude=0.1,
+            time=datetime(2023, 1, 1, 9, 0, 0, tzinfo=timezone.utc),
         )
     )
     gpx_data.routes.append(route)
