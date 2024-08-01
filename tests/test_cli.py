@@ -23,14 +23,13 @@ def set_environment_variables(monkeypatch: pytest.MonkeyPatch):
 def _run_cli(args):
     env = os.environ.copy()
     env["TZ"] = "America/Los_Angeles"
-    result = subprocess.run(
+    return subprocess.run(
         ["python", CLI_SCRIPT_PATH] + args,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         env=env,
     )
-    return result
 
 
 @pytest.fixture
@@ -58,6 +57,7 @@ file_test_cases = [
 
 
 def input_output_names(filename: str):
+    # sourcery skip: use-fstring-for-concatenation
     return (
         os.path.join(BASE_DIR, "samples", filename + ".gpx"),
         os.path.join(BASE_DIR, "samples", filename + ".md"),
