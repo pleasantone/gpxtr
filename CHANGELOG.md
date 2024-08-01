@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2](https://github.com/pleasantone/gpxtable/compare/v1.5.1...v1.5.2) (2024-08-01)
+
+
+### Bug Fixes
+
+* flake8 & sourcery cleanups ([5051e88](https://github.com/pleasantone/gpxtable/commit/5051e885d6a7d3f470416df7a23e0c065efeea96))
+* ruff cleanups and lint with ruff ([6683fac](https://github.com/pleasantone/gpxtable/commit/6683fac81d33589eb76cd0534033deda2b46966e))
+
 ## [1.5.1](https://github.com/pleasantone/gpxtable/compare/v1.5.0...v1.5.1) (2024-07-18)
 
 
