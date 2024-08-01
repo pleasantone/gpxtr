@@ -6,4 +6,4 @@ __version__ = "1.5.1"
 __all__ = ["GPXTableCalculator"]
 __author__ = "Paul Traina"
 
-from .gpxtable import GPXTableCalculator, GPXPointMixin
+from .gpxtable import GPXTableCalculator

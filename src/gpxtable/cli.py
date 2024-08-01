@@ -1,4 +1,3 @@
-# pylint: disable=line-too-long, missing-function-docstring
 """
 gpxtable - Create a markdown template from a Garmin GPX file for route information
 """
@@ -19,6 +18,16 @@ from gpxtable import GPXTableCalculator
 
 
 def create_markdown(args, file=None) -> None:
+    """
+    Creates a markdown table based on GPX information provided in the input files.
+
+    Args:
+        args: Command line arguments containing input options.
+        file: File to write the markdown output to.
+
+    Raises:
+        SystemExit: If there is an issue with the timezone or parsing the GPX information.
+    """
     tz = None
     if args.timezone:
         tz = dateutil.tz.gettz(args.timezone)
@@ -63,6 +72,23 @@ class _DateParser(argparse.Action):
 
 
 def main() -> None:
+    """
+    Parses command line arguments to generate a table in either markdown
+    or HTML format based on the provided input files.
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Side Effects:
+        Reads input files, processes data, and writes output to a file or stdout.
+
+    Returns:
+        None
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "input", nargs="+", type=argparse.FileType("r"), help="input file(s)"
