@@ -30,6 +30,12 @@ def gpx_data():
     )
     track.segments.append(segment)
     gpx.tracks.append(track)
+    gpx.waypoints.append(
+        GPXWaypoint(latitude=52.0, longitude=0.0, name="Start", symbol="Waypoint")
+    )
+    gpx.waypoints.append(
+        GPXWaypoint(latitude=52.0, longitude=0.1, name="End", symbol="Waypoint")
+    )
     return gpx
 
 
