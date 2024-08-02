@@ -2,6 +2,7 @@ import argparse
 import pytest
 import subprocess
 import os
+from typing import Tuple, List
 from unittest import mock
 
 # Define the paths
@@ -20,7 +21,7 @@ def set_environment_variables(monkeypatch: pytest.MonkeyPatch):
         yield  # This is the magical bit which restore the environment after
 
 
-def _run_cli(args):
+def _run_cli(args: List[str]):
     env = os.environ.copy()
     env["TZ"] = "America/Los_Angeles"
     return subprocess.run(
@@ -34,7 +35,7 @@ def _run_cli(args):
 
 @pytest.fixture
 def run_cli():
-    return _run_cli
+    yield _run_cli
 
 
 def test_cli_help(run_cli):
@@ -56,7 +57,7 @@ file_test_cases = [
 ]
 
 
-def input_output_names(filename: str):
+def input_output_names(filename: str) -> Tuple[str, str]:
     # sourcery skip: use-fstring-for-concatenation
     return (
         os.path.join(BASE_DIR, "samples", filename + ".gpx"),
@@ -75,7 +76,7 @@ def test_cli_files_parm(test_case: str, arguments: list):
     assert result.stdout == expected_output
 
 
-def test_bad_xml():
+def test_bad_xml() -> None:
     input_file, _ = input_output_names("bad-xml")
     result = _run_cli([input_file])
     assert result.returncode != 0
