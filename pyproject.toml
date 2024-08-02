@@ -41,7 +41,6 @@ gunicorn = [
 ]
 tests = [
     "pytest",
-    "pytest-cov",
     "pytest-flask",
     "responses"
 ]

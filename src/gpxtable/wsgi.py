@@ -8,7 +8,9 @@ import secrets
 from datetime import datetime
 from flask import (
     Flask,
+    Blueprint,
     request,
+    current_app,
     flash,
     redirect,
     render_template,
@@ -27,16 +29,14 @@ import validators
 from gpxtable import GPXTableCalculator
 
 
-app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
-app.config["SECRET_KEY"] = secrets.token_urlsafe(16)
-
-
 class InvalidSubmission(Exception):
     """Exception for invalid form submission"""
 
 
-@app.errorhandler(InvalidSubmission)
+bp = Blueprint("gpxtable", __name__)
+
+
+@bp.errorhandler(InvalidSubmission)
 def invalid_submission(err):
     """
     Handles invalid form submissions and redirects to the upload file page.
@@ -48,8 +48,8 @@ def invalid_submission(err):
         Flask response: Redirects to the upload file page.
     """
     flash(str(err))
-    app.logger.info(err)
-    return redirect(url_for("upload_file"))
+    current_app.logger.info(err)
+    return redirect(url_for("gpxtable.upload_file"))
 
 
 def create_table(stream, tz=None):
@@ -104,7 +104,7 @@ def create_table(stream, tz=None):
         return html.escape(output) if output_format == "htmlcode" else output
 
 
-@app.route("/", methods=["GET", "POST"])
+@bp.route("/", methods=["GET", "POST"])
 def upload_file():
     """
     Handles file upload and processing based on user input, otherwise renders the upload page.
@@ -145,7 +145,7 @@ def upload_file():
     return result
 
 
-@app.route("/about")
+@bp.route("/about")
 def about():
     """
     Renders the 'about.html' template.
@@ -154,3 +154,15 @@ def about():
         Flask response: Renders the 'about.html' template.
     """
     return render_template("about.html")
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
+    app.config["SECRET_KEY"] = secrets.token_urlsafe(16)
+    app.register_blueprint(bp)
+    return app
+
+
+if __name__ == "__main__":
+    application = create_app()
