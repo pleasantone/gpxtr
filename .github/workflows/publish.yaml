@@ -1,6 +1,9 @@
-name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
+name: Publish Python distribution to PyPI
 
-on: push
+on:
+  push:
+    tags:
+    - 'v*'
 
 jobs:
   build:
@@ -27,12 +30,38 @@ jobs:
         name: python-package-distributions
         path: dist/
 
+  # first do a test-publish to make sure all is OK
+  publish-to-testpypi:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    needs:
+    - build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/gpxtable
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  # now do the final publish
   publish-to-pypi:
     name: >-
       Publish Python 🐍 distribution 📦 to PyPI
-    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs:
     - build
+    - publish-to-testpypi
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -49,6 +78,8 @@ jobs:
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
 
+# Disabled because we use release-please now.
+#
 #  github-release:
 #    name: >-
 #      Sign the Python 🐍 distribution 📦 with Sigstore
@@ -92,26 +123,4 @@ jobs:
 #        '${{ github.ref_name }}' dist/**
 #        --repo '${{ github.repository }}'
 #
-#  publish-to-testpypi:
-#    name: Publish Python 🐍 distribution 📦 to TestPyPI
-#    needs:
-#    - build
-#    runs-on: ubuntu-latest
-#
-#    environment:
-#      name: testpypi
-#      url: https://test.pypi.org/p/gpxtable
-#
-#    permissions:
-#      id-token: write  # IMPORTANT: mandatory for trusted publishing
-#
-#    steps:
-#    - name: Download all the dists
-#      uses: actions/download-artifact@v4
-#      with:
-#        name: python-package-distributions
-#        path: dist/
-#    - name: Publish distribution 📦 to TestPyPI
-#      uses: pypa/gh-action-pypi-publish@release/v1
-#      with:
-#        repository-url: https://test.pypi.org/legacy/
+
