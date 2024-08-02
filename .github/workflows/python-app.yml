@@ -48,6 +48,7 @@ jobs:
       contents: 'read'
       id-token: 'write'
     runs-on: ubuntu-latest
+    environment: google-app-engine
     needs:
     - build-and-test
     name: Check out and deploy to GAE
