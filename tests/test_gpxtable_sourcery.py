@@ -50,7 +50,15 @@ def output_stream():
 
 
 @pytest.mark.parametrize(
-    "imperial, speed, depart_at, ignore_times, display_coordinates, tz, expected_output",
+    (
+        "imperial",
+        "speed",
+        "depart_at",
+        "ignore_times",
+        "display_coordinates",
+        "tz",
+        "expected_output",
+    ),
     [
         (
             True,
@@ -105,7 +113,15 @@ def test_print_waypoints(
 
 
 @pytest.mark.parametrize(
-    "imperial, speed, depart_at, ignore_times, display_coordinates, tz, expected_output",
+    (
+        "imperial",
+        "speed",
+        "depart_at",
+        "ignore_times",
+        "display_coordinates",
+        "tz",
+        "expected_output",
+    ),
     [
         (
             True,
@@ -160,7 +176,15 @@ def test_print_header(
 
 
 @pytest.mark.parametrize(
-    "imperial, speed, depart_at, ignore_times, display_coordinates, tz, expected_output",
+    (
+        "imperial",
+        "speed",
+        "depart_at",
+        "ignore_times",
+        "display_coordinates",
+        "tz",
+        "expected_output",
+    ),
     [
         (
             True,
@@ -231,7 +255,7 @@ def test_print_routes(
 
 
 @pytest.mark.parametrize(
-    "time_s, expected_output",
+    ("time_s", "expected_output"),
     [
         (0, "n/a"),
         (3661, "01:01:01"),
@@ -247,7 +271,7 @@ def test_format_time(time_s, expected_output):
 
 
 @pytest.mark.parametrize(
-    "length, imperial, units, expected_output",
+    ("length", "imperial", "units", "expected_output"),
     [
         (1000, True, True, "1 mi"),
         (1000, False, True, "1 km"),
@@ -273,7 +297,7 @@ def test_format_long_length(length, imperial, units, expected_output):
 
 
 @pytest.mark.parametrize(
-    "length, imperial, units, expected_output",
+    ("length", "imperial", "units", "expected_output"),
     [
         (1, True, True, "3.28 ft"),
         (1, False, True, "1.00 m"),
@@ -299,7 +323,7 @@ def test_format_short_length(length, imperial, units, expected_output):
 
 
 @pytest.mark.parametrize(
-    "speed, imperial, units, expected_output",
+    ("speed", "imperial", "units", "expected_output"),
     [
         (50, True, True, "31.07 mph"),
         (50, False, True, "50.00 km/h"),
@@ -325,7 +349,7 @@ def test_format_speed(speed, imperial, units, expected_output):
 
 
 @pytest.mark.parametrize(
-    "dist, speed, expected_output",
+    ("dist", "speed", "expected_output"),
     [
         (1000, 50, timedelta(minutes=1.2)),
         (2000, 100, timedelta(minutes=1.2)),

@@ -19,17 +19,17 @@ def app():
     app = create_app()
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False
-    yield app
+    return app
 
 
-def test_index(client: FlaskClient):
+def test_index(client: FlaskClient) -> None:
     """Test the index page."""
     response = client.get(url_for("gpxtable.upload_file"))
     assert response.status_code == 200
     assert b"URL to GPX file" in response.data
 
 
-def test_upload_file(client: FlaskClient):
+def test_upload_file(client: FlaskClient) -> None:
     """Test file upload."""
     data = {"file": (open(TEST_FILE, "rb"), os.path.dirname(TEST_FILE))}
     response = client.post(
@@ -40,7 +40,7 @@ def test_upload_file(client: FlaskClient):
 
 
 @responses.activate
-def test_upload_url(client: FlaskClient):
+def test_upload_url(client: FlaskClient) -> None:
     """Test URL submission."""
 
     response = client.post(
@@ -52,7 +52,7 @@ def test_upload_url(client: FlaskClient):
     assert TEST_RESPONSE in response.data
 
 
-def test_bad_xml(client: FlaskClient):
+def test_bad_xml(client: FlaskClient) -> None:
     data = {"file": (open(BAD_XML_FILE, "rb"), os.path.dirname(BAD_XML_FILE))}
     response = client.post(
         url_for("gpxtable.upload_file"),

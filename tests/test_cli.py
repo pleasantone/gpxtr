@@ -3,22 +3,10 @@ import pytest
 import subprocess
 import os
 from typing import Tuple, List
-from unittest import mock
 
 # Define the paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLI_SCRIPT_PATH = os.path.join(BASE_DIR, "src", "gpxtable", "cli.py")
-
-
-@pytest.fixture
-def set_environment_variables(monkeypatch: pytest.MonkeyPatch):
-    env_vars = {
-        "TZ": "America/Los_Angeles",
-    }
-    with mock.patch.dict(os.environ, env_vars, clear=True):
-        for key, value in env_vars.items():
-            monkeypatch.setenv(key, value)
-        yield  # This is the magical bit which restore the environment after
 
 
 def _run_cli(args: List[str]):
@@ -65,20 +53,20 @@ def input_output_names(filename: str) -> Tuple[str, str]:
     )
 
 
-@pytest.mark.parametrize("test_case,arguments", file_test_cases)
-def test_cli_files_parm(test_case: str, arguments: list):
+@pytest.mark.parametrize(("test_case", "arguments"), file_test_cases)
+def test_cli_files_parm(run_cli, test_case: str, arguments: list):
     input_file, expected_file = input_output_names(test_case)
     args = arguments + [input_file]
-    result = _run_cli(args)
+    result = run_cli(args)
     assert result.returncode == 0
     with open(expected_file, "r") as f:
         expected_output = f.read()
     assert result.stdout == expected_output
 
 
-def test_bad_xml() -> None:
+def test_bad_xml(run_cli) -> None:
     input_file, _ = input_output_names("bad-xml")
-    result = _run_cli([input_file])
+    result = run_cli([input_file])
     assert result.returncode != 0
     assert "Error parsing XML" in result.stderr
 
