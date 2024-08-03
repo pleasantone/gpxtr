@@ -627,8 +627,9 @@ class GPXTableCalculator:
                     for extension_point in extension.findall(
                         "gpxx:rpt", GPXTABLE_XML_NAMESPACE
                     ):
-                        current = float(extension_point.get("lat")), float(
-                            extension_point.get("lon")
+                        current = (
+                            float(extension_point.get("lat")),
+                            float(extension_point.get("lon")),
                         )
                         dist += self._calculate_distance(previous, current)
                         previous = current

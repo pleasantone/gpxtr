@@ -35,7 +35,7 @@ def _run_cli(args: List[str]):
 
 @pytest.fixture
 def run_cli():
-    yield _run_cli
+    return _run_cli
 
 
 def test_cli_help(run_cli):
