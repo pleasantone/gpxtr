@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.0](https://github.com/pleasantone/gpxtable/compare/v1.5.2...v2.0.0) (2024-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **wsgi:** convert WSGI into a factory
+
+### Features
+
+* **wsgi:** convert WSGI into a factory ([065ec92](https://github.com/pleasantone/gpxtable/commit/065ec92435fbdeb8e10e210b8442cfb832cc2ee5))
+
+
+### Bug Fixes
+
+* formatting cleanups ([12c500d](https://github.com/pleasantone/gpxtable/commit/12c500d88ec4fe068a95c34d1c014cbab950baea))
+* minor code cleanup ([40a1be7](https://github.com/pleasantone/gpxtable/commit/40a1be7e573b957c2560f5fa1f87e18ce8e070f1))
+
 ## [1.5.2](https://github.com/pleasantone/gpxtable/compare/v1.5.1...v1.5.2) (2024-08-01)
 
 
