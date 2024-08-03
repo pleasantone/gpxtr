@@ -1,5 +1,5 @@
 """
-gpxtable - Create a markdown template from a Garmin GPX file for route information
+gpxtable.cli - Command line interface for GPXTable module
 """
 
 import argparse

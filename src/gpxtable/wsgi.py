@@ -1,5 +1,5 @@
 """
-gpxtable - Create a markdown template from a Garmin GPX file for route information
+gpxtable.wsgi - Flask Blueprint/Application for running gpxtable as a server
 """
 
 import io
