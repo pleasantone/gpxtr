@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.0.1](https://github.com/pleasantone/gpxtable/compare/v2.0.0...v2.0.1) (2024-08-06)
+
+
+### Bug Fixes
+
+* allow waypoint classifier to be passed in as a parameter ([9688b84](https://github.com/pleasantone/gpxtable/commit/9688b84a14837beb38fe4610acaa752ef849e8fc))
+
+
+### Documentation
+
+* deduplicate code blocks for basecamp-route ([c2e7784](https://github.com/pleasantone/gpxtable/commit/c2e77847685fe7dcc6d27ade4cd139e803c2a31f))
+* fix API documentation ([93f5d44](https://github.com/pleasantone/gpxtable/commit/93f5d442ba0bafedfc9c3ee48be4acda638f3511))
+* fix readthedocs generation ([27c7370](https://github.com/pleasantone/gpxtable/commit/27c737046366da29fefa8f07947f42c4f4acc6ca))
+* inline the output of basecamp-tracks ([94f5c75](https://github.com/pleasantone/gpxtable/commit/94f5c75c7ecf919fa7728d546f1eb6846b606b36))
+* try again to fix readthedocs ([4fad381](https://github.com/pleasantone/gpxtable/commit/4fad381f55f241a6ee074c2fc2e1221aa652ff5d))
+
 ## [2.0.0](https://github.com/pleasantone/gpxtable/compare/v1.5.2...v2.0.0) (2024-08-03)
 
 
