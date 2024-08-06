@@ -51,7 +51,7 @@ def input_output_names(filename: str) -> Tuple[str, str]:
     # sourcery skip: use-fstring-for-concatenation
     return (
         os.path.join(BASE_DIR, "samples", filename + ".gpx"),
-        os.path.join(BASE_DIR, "samples", filename + ".md"),
+        os.path.join(BASE_DIR, "samples", filename + ".txt"),
     )
 
 

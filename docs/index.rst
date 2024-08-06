@@ -27,7 +27,7 @@ other formats like HTML.
 
 Example:
 
-.. literalinclude:: ../samples/basecamp-route.md
+.. literalinclude:: ../samples/basecamp-route.txt
    :language: text
 
 Distance from start is included, as is distance between fuel stops if the fuel
