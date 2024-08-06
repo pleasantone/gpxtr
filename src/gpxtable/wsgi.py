@@ -157,6 +157,7 @@ def about():
 
 
 def create_app():
+    """factory for creating an app from our blueprint"""
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1000 * 1000  # 16mb
     app.config["SECRET_KEY"] = secrets.token_urlsafe(16)

@@ -27,6 +27,52 @@ GPXTABLE_XML_NAMESPACE = {
 }
 
 
+GPXTABLE_DEFAULT_WAYPOINT_CLASSIFIER: List[dict] = [
+    {
+        "symbol": "Gas/Restaurant",
+        "search": r"(?=.*\b(Gas|Fuel)\b)(?=.*\b(Lunch|Meal)\b)",
+        "delay": 75,
+        "marker": "GL",
+        "fuel_reset": True,
+    },
+    {
+        "symbol": "Gas Station",
+        "search": r"\bGas\b|\bFuel\b|\b\(G\)\b",
+        "delay": 15,
+        "marker": "G",
+        "fuel_reset": True,
+    },
+    {
+        "symbol": "Restaurant",
+        "search": r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b|\b\(L\)\b",
+        "delay": 60,
+        "marker": "L",
+    },
+    {
+        "symbol": "Restroom",
+        "search": r"\bRestroom\b|\bBreak\b|\b\(R\)\b",
+        "delay": 15,
+    },
+    {
+        "symbol": "Scenic Area",
+        "delay": 5,
+    },
+    {"symbol": "Photo", "search": r"\bPhotos?\b|\b\(P\)\b", "delay": 5},
+]
+"""
+    Additional data used for points if no other timing/type data is found.
+    The list is iterated in sequence, the first match is returned.
+
+    Parameters:
+        symbol (str): type of waypoint (comment notation)
+        search (regex): regular expression matching waypoint name
+        delay (int): default delay in minutes
+        marker (str): shorthand notation for gas or lunch (a
+            meal) or both ("G", "L", "GL")
+        fuel_reset (bool): reset due to refueling
+"""
+
+
 class NearestLocationDataExt(NamedTuple):
     """
     Extended class for NearestLocationData
@@ -152,52 +198,11 @@ class GPXPointMixin:
     extensions
     """
 
-    point_types: list[dict] = [
-        {
-            "symbol": "Gas/Restaurant",
-            "search": r"(?=.*\b(Gas|Fuel)\b)(?=.*\b(Lunch|Meal)\b)",
-            "delay": 75,
-            "marker": "GL",
-            "fuel_reset": True,
-        },
-        {
-            "symbol": "Gas Station",
-            "search": r"\bGas\b|\bFuel\b|\b\(G\)\b",
-            "delay": 15,
-            "marker": "G",
-            "fuel_reset": True,
-        },
-        {
-            "symbol": "Restaurant",
-            "search": r"\bRestaurant\b|\bLunch\b|\bBreakfast\b|\b\Dinner\b|\b\(L\)\b",
-            "delay": 60,
-            "marker": "L",
-        },
-        {
-            "symbol": "Restroom",
-            "search": r"\bRestroom\b|\bBreak\b|\b\(R\)\b",
-            "delay": 15,
-        },
-        {
-            "symbol": "Scenic Area",
-            "delay": 5,
-        },
-        {"symbol": "Photo", "search": r"\bPhotos?\b|\b\(P\)\b", "delay": 5},
-    ]
-    """
-        Additional data used for points if no other timing/type data is found.
-        The list is iterated in sequence, the first match is returned.
-
-        Parameters:
-            symbol (str): type of waypoint (comment notation)
-            search (regex): regular expression matching waypoint name
-            delay (int): default delay in minutes
-            marker (str): shorthand notation for gas or lunch (a
-                meal) or both ("G", "L", "GL")
-            fuel_reset (bool): reset due to refueling
-    """
-
-    def __init__(self, base: Union[GPXWaypoint, GPXRoutePoint]):
+    def __init__(
+        self,
+        base: Union[GPXWaypoint, GPXRoutePoint],
+        point_classifier: Optional[List[dict]] = None,
+    ):
         if not isinstance(self, (GPXWaypoint, GPXRoutePoint)):
             raise TypeError("Not extending a GPXWaypoint or GPXRoutePoint")
         super().__init__(
@@ -214,6 +219,7 @@ class GPXPointMixin:
             vertical_dilution=base.vertical_dilution,  # type: ignore
             position_dilution=base.position_dilution,  # type: ignore
         )
+        self.point_classifier = point_classifier or GPXTABLE_DEFAULT_WAYPOINT_CLASSIFIER
         self.extensions = base.extensions
 
     def _classify(self):
@@ -227,7 +233,7 @@ class GPXPointMixin:
             ),
         ):
             raise TypeError("Invalid instance extension")
-        for values in self.point_types:
+        for values in self.point_classifier:
             if self.symbol == values["symbol"]:
                 return values
             if "search" in values and re.search(
@@ -349,6 +355,7 @@ class GPXTableCalculator:
         ignore_times: bool = False,
         display_coordinates: bool = False,
         tz: Optional[tzinfo] = None,
+        point_classifier: Optional[List[dict]] = None,
     ) -> None:
         self.gpx = gpx
         self.output = output
@@ -360,6 +367,7 @@ class GPXTableCalculator:
         self.ignore_times: bool = ignore_times
         self.display_coordinates: bool = display_coordinates
         self.tz = tz
+        self.point_classifier = point_classifier
 
     def print_all(self) -> None:
         """
@@ -471,7 +479,10 @@ class GPXTableCalculator:
                         wp, 0.001, deduplicate_distance=self.waypoint_debounce
                     ),
                 )
-                for wp in (GPXWaypointExt(wpb) for wpb in self.gpx.waypoints)
+                for wp in (
+                    GPXWaypointExt(wpb, self.point_classifier)
+                    for wpb in self.gpx.waypoints
+                )
                 if not wp.shaping_point()
             ]
             waypoints = sorted(
@@ -595,7 +606,9 @@ class GPXTableCalculator:
             if not route.points:
                 continue
 
-            route_points = [GPXRoutePointExt(rp) for rp in route.points]
+            route_points = [
+                GPXRoutePointExt(rp, self.point_classifier) for rp in route.points
+            ]
             dist = 0.0
             previous = route_points[0].latitude, route_points[0].longitude
             last_gas = 0.0
