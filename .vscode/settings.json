@@ -25,6 +25,7 @@
         "iloc",
         "intersphinx",
         "itertuples",
+        "literalinclude",
         "maxdepth",
         "modindex",
         "Navaid",

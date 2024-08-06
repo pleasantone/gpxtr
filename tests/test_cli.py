@@ -40,6 +40,7 @@ def test_cli_invalid_file(run_cli):
 
 file_test_cases = [
     ("basecamp", ["--depart", "07/30/2023 09:15:00"]),
+    ("basecamp-route", []),
     ("scenic2", ["--depart", "07/30/2023 09:15:00"]),
     ("ich-north-fixed", ["--depart", "07/30/2023 09:15:00"]),
 ]
